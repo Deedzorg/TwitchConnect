@@ -17,10 +17,8 @@ let autoPokecatchEnabled = false;
 let lastCatchTime = 0;
 const CATCH_COOLDOWN = 5000;
 let first151Pokemon = [];
+ let storedOauthToken = null;
 let lastBallType = null;
-
-
-
 
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
@@ -39,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  storedOauthToken = localStorage.getItem('twitchAccessToken');
   oauthToken = localStorage.getItem('twitchAccessToken');
 
   if (!oauthToken) {
@@ -58,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .then(response => response.json())
     .then(data => {
+      console.log(data)
       if (data.data && data.data.length > 0) {
         username = data.data[0].display_name;
         console.log('Logged in as:', username);
@@ -69,41 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch(err => console.error('Error fetching user data:', err));
   }
 });
-
-// This code should run on the redirect page
-function getAccessTokenFromHash() {
-  const hash = window.location.hash;
-  const params = new URLSearchParams(hash.slice(1)); // remove the '#' at the beginning
-  return params.get('access_token');
-}
-
-const accessToken = getAccessTokenFromHash();
-if (accessToken) {
-  // Save the token (e.g., in localStorage or state management)
-  localStorage.setItem('twitchAccessToken', accessToken);
-  // You can now use the token to fetch user data or interact with Twitch APIs.
-  fetchTwitchUserData(accessToken);
-}
-
-function fetchTwitchUserData(token) {
-  fetch('https://api.twitch.tv/helix/users', {
-    headers: {
-      'Client-ID': '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
-      'Authorization': `Bearer ${token}`
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.data && data.data.length > 0) {
-      const user = data.data[0];
-      console.log('Logged in as:', user.display_name);
-      // Update your UI with the user's name and profile picture, etc.
-    }
-  })
-  .catch(err => console.error('Error fetching user data:', err));
-}
-
-
 
 
 async function fetchGlobalBadges() {
@@ -124,18 +89,6 @@ async function fetchGlobalBadges() {
     console.log("Global Badges:", data);
   } catch (error) {
     console.error("Error fetching global badges:", error);
-  }
-}
-
-
-function toggleChannelManager() {
-  const manager = document.getElementById("channelManager");
-  if (manager.style.display === "none" || manager.style.display === "") {
-    manager.style.display = "block";
-    // Immediately update live status when opening the manager
-    checkLiveStatus();
-  } else {
-    manager.style.display = "none";
   }
 }
 
@@ -177,14 +130,13 @@ function toggleEmotePicker(context) {
   }
 }
 
-
 // --- Global API functions ---
 
 async function fetchGlobalEmotes() {
   const response = await fetch('https://api.twitch.tv/helix/chat/emotes/global', {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -206,7 +158,7 @@ async function getBroadcasterId(channelName) {
   const response = await fetch(`https://api.twitch.tv/helix/users?login=${channelName}`, {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -225,7 +177,7 @@ async function fetchChannelBadges(broadcasterId) {
   const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -247,7 +199,7 @@ async function fetchChannelEmotes(broadcasterId) {
   const response = await fetch(`https://api.twitch.tv/helix/chat/emotes?broadcaster_id=${broadcasterId}`, {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -271,7 +223,7 @@ async function fetchChannelPicture(channel) {
   const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}` // Use stored token if available
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -338,7 +290,7 @@ async function fetchChannelPicture(channel) {
   const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
     headers: {
       'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}` // Use stored token if available
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   if (!response.ok) {
@@ -421,7 +373,7 @@ async function createChannelElement(channel) {
     const channelPromises = trackedChannels.map(createChannelElement);
     Promise.all(channelPromises)
         .then(channelElements => {
-            // Append elements to the list once all are created
+            // Append elements to the list once all are created.
             channelElements.forEach(li => list.appendChild(li));
         }).catch(error => {
             console.error("Error updating tracked channels:", error);
@@ -440,7 +392,7 @@ async function checkLiveStatus() {
     const response = await fetch(`https://api.twitch.tv/helix/streams?${query}`, {
       headers: {
         "Client-ID": clientId,
-        "Authorization": `Bearer ${oauthToken}`
+        "Authorization": `Bearer ${storedOauthToken || oauthToken}`
       }
     });
     const data = await response.json();
@@ -475,94 +427,6 @@ async function checkLiveStatus() {
     });
   }
 
-function toggleEmotePicker(context) {
-  let inputField, pickerDiv;
-  let combinedEmotes; // Declare combinedEmotes here
-
-  if (context === 'global') {
-    inputField = document.getElementById("globalMessage");
-    pickerDiv = document.getElementById("globalEmotePicker");
-    combinedEmotes = globalEmotes; // Use global emotes for global picker
-  } else {
-    // For per-chat input, context is an object {input: ..., picker: ...}
-    inputField = context.input;
-    pickerDiv = context.picker;
-    // Find the chat box associated with the picker
-    const chatBox = pickerDiv.closest('.chat-box');
-    // Extract channel from data attribute
-    const channel = chatBox.dataset.channel;
-        // Retrieve combined emotes from chatbox, using it's channel to access it
-        combinedEmotes = getCombinedEmotesForChannel(channel);
-  }
-
-  pickerDiv.classList.toggle("active");
-  // Populate picker if active and not already populated
-  if (pickerDiv.classList.contains("active") && pickerDiv.childElementCount === 0) {
-    for (let emote in combinedEmotes) {
-      const img = document.createElement("img");
-      img.style.cursor = "pointer";
-      img.src = combinedEmotes[emote];
-      img.alt = emote;
-      img.title = emote;
-      img.onclick = () => {
-        insertAtCursor(inputField, emote + " ");
-        pickerDiv.classList.remove("active"); //close on click
-      };
-      pickerDiv.appendChild(img);
-    }
-  }
-}
-
-
-function toggleChannelManager() {
-  const manager = document.getElementById("channelManager");
-  if (manager.style.display === "none" || manager.style.display === "") {
-    manager.style.display = "block";
-    // Immediately update live status when opening the manager
-    checkLiveStatus();
-  } else {
-    manager.style.display = "none";
-  }
-}
-
-function toggleEmotePicker(context) {
-  let inputField, pickerDiv;
-  let combinedEmotes; // Declare combinedEmotes here
-
-  if (context === 'global') {
-    inputField = document.getElementById("globalMessage");
-    pickerDiv = document.getElementById("globalEmotePicker");
-    combinedEmotes = globalEmotes; // Use global emotes for global picker
-  } else {
-    // For per-chat input, context is an object {input: ..., picker: ...}
-    inputField = context.input;
-    pickerDiv = context.picker;
-    // Find the chat box associated with the picker
-    const chatBox = pickerDiv.closest('.chat-box');
-    // Extract channel from data attribute
-    const channel = chatBox.dataset.channel;
-    // Retrieve combined emotes from chatbox, using its channel to access it
-    combinedEmotes = getCombinedEmotesForChannel(channel);
-  }
-
-  pickerDiv.classList.toggle("active");
-  // Populate picker if active and not already populated
-  if (pickerDiv.classList.contains("active") && pickerDiv.childElementCount === 0) {
-    for (let emote in combinedEmotes) {
-      const img = document.createElement("img");
-      img.style.cursor = "pointer";
-      img.src = combinedEmotes[emote];
-      img.alt = emote;
-      img.title = emote;
-      img.onclick = () => {
-        insertAtCursor(inputField, emote + " ");
-        pickerDiv.classList.remove("active"); //close on click
-      };
-      pickerDiv.appendChild(img);
-    }
-  }
-}
-
 function getCombinedEmotesForChannel(channel) {
   // Find the chat box that matches the current channel
   const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
@@ -576,6 +440,7 @@ function getCombinedEmotesForChannel(channel) {
   }
 }
 // Helper to insert text at cursor in input field
+
 function insertAtCursor(input, textToInsert) {
   const start = input.selectionStart;
   const end = input.selectionEnd;
@@ -591,7 +456,7 @@ async function addChat(providedChannel) {
   if (!channel) {
     channel = prompt("Enter Twitch channel name:");
     if (!channel) return;
-  }
+  } 
   channel = channel.trim();
   // Strip URLs, keeping only the channel name and convert to lowercase for consistency
   channel = channel.replace(/.*twitch\.tv\//, "").toLowerCase();
@@ -826,6 +691,7 @@ function manageTrackedChannels() {
     console.log("Tracked channels:", trackedChannels);
   }
 }
+
 // Poll Twitch's Get Streams API for tracked channels and open/close chats accordingly
 async function checkLiveStatus() {
   if (!trackedChannels.length) return;
@@ -838,7 +704,7 @@ async function checkLiveStatus() {
   const response = await fetch(`https://api.twitch.tv/helix/streams?${query}`, {
     headers: {
       "Client-ID": clientId,
-      "Authorization": `Bearer ${oauthToken}`
+      "Authorization": `Bearer ${storedOauthToken || oauthToken}`
     }
   });
   const data = await response.json();
@@ -872,6 +738,7 @@ async function checkLiveStatus() {
     }
   });
 }
+
 // Toggle the visibility of the channel manager UI
 function toggleChannelManager() {
   const manager = document.getElementById("channelManager");
@@ -883,6 +750,7 @@ function toggleChannelManager() {
     manager.style.display = "none";
   }
 }
+
 // Add a new channel to the trackedChannels list
 function addTrackedChannel() {
   const input = document.getElementById("newTrackedChannel");
@@ -901,6 +769,7 @@ function addTrackedChannel() {
 function saveTrackedChannels() {
   localStorage.setItem("trackedChannels", JSON.stringify(trackedChannels));
 }
+
 
 function loadTrackedChannels() {
   const stored = localStorage.getItem("trackedChannels");
@@ -922,7 +791,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   socket.onopen = () => {
     console.log(`✅ Connected to #${channel}`);
     socket.send("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n");
-    socket.send(`PASS oauth:${oauthToken}\r\n`);
+    socket.send(`PASS oauth:${storedOauthToken || oauthToken}\r\n`);
     socket.send(`NICK ${username}\r\n`);
     socket.send(`JOIN #${channel}\r\n`);
   };
