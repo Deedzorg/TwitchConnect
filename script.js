@@ -31,10 +31,16 @@ async function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  oauthToken = localStorage.getItem('twitchAccessToken'); // Assign globally
+  // Ensure chatContainer is defined
+  const chatContainer = document.getElementById("chat-container");
+  if (!chatContainer) {
+    console.error("chatContainer is missing from the DOM.");
+    return;
+  }
+
+  oauthToken = localStorage.getItem('twitchAccessToken');
 
   if (!oauthToken) {
-    // No token found—redirect the user to Twitch's login page
     window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
       new URLSearchParams({
         client_id: clientId,
@@ -43,30 +49,25 @@ document.addEventListener("DOMContentLoaded", () => {
         scope: 'user:read:email chat:read chat:edit'
       });
   } else {
-    // Token exists—fetch user data and initialize the app
     fetch('https://api.twitch.tv/helix/users', {
       headers: {
         'Client-ID': clientId,
         'Authorization': `Bearer ${oauthToken}`
       }
     })
-      .then(response => response.json())
-      .then(data => {
-        if (data.data && data.data.length > 0) {
-          username = data.data[0].display_name;
-          console.log('Logged in as:', username);
-          
-          // Now initialize your app after authentication and DOM is ready
-          initApp();
-        } else {
-          console.error('No user data found.');
-        }
-      })
-      .catch(err => console.error('Error fetching user data:', err));
+    .then(response => response.json())
+    .then(data => {
+      if (data.data && data.data.length > 0) {
+        username = data.data[0].display_name;
+        console.log('Logged in as:', username);
+        initApp();
+      } else {
+        console.error('No user data found.');
+      }
+    })
+    .catch(err => console.error('Error fetching user data:', err));
   }
 });
-
-
 
 // This code should run on the redirect page
 function getAccessTokenFromHash() {
