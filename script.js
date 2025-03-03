@@ -490,6 +490,7 @@ function insertAtCursor(input, textToInsert) {
   input.focus();
 }
 
+
 async function addChat(providedChannel) {
   let channel = providedChannel;
   if (!channel) {
@@ -613,6 +614,7 @@ async function addChat(providedChannel) {
 
   slideChats(0);
 }
+
 
 function sendChatMessage(socket, channel, inputField) {
   const message = inputField.value;
