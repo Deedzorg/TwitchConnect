@@ -70,9 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-
 async function fetchGlobalBadges() {
-  const token = oauthToken || localStorage.getItem('twitchAccessToken'); // Ensure it's fetched
+  const token = oauthToken || localStorage.getItem('twitchAccessToken');
   if (!token) {
     console.error("OAuth token missing in fetchGlobalBadges");
     return;
@@ -86,7 +85,14 @@ async function fetchGlobalBadges() {
       }
     });
     const data = await response.json();
-    console.log("Global Badges:", data);
+    // Populate the globalBadges object:
+    data.data.forEach(set => {
+      globalBadges[set.set_id] = {};
+      set.versions.forEach(version => {
+        globalBadges[set.set_id][version.id] = version.image_url_1x;
+      });
+    });
+    console.log("Global Badges:", globalBadges);
   } catch (error) {
     console.error("Error fetching global badges:", error);
   }
