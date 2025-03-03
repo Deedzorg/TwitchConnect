@@ -508,11 +508,7 @@ async function addChat(providedChannel) {
     return;
   }
 
-  // ... (rest of your existing addChat code)
-
   // Before appending, mark the chat box with a data attribute for the channel
- 
- 
   const channelBadges = await fetchChannelBadges(broadcasterId);
   const channelEmotes = await fetchChannelEmotes(broadcasterId);
 
@@ -526,13 +522,11 @@ async function addChat(providedChannel) {
   });
   const combinedEmotes = { ...globalEmotes, ...channelEmotes };
 
- 
   // Create chat box UI
   const chatBox = document.createElement("div");
   chatBox.className = "chat-box";
   chatBox.dataset.channel = channel;
   chatBox.combinedEmotes = combinedEmotes;
-
 
   // Chat header
   const header = document.createElement("div");
@@ -602,7 +596,7 @@ async function addChat(providedChannel) {
   chatBox.appendChild(inputDiv);
 
   // Append chat box to slider container
-  chatContainer.appendChild(chatBox);
+  window.chatContainer.appendChild(chatBox);
 
   // Connect to Twitch chat
   const socket = connectToTwitchChat(channel, messagesDiv, combinedBadges, combinedEmotes);
@@ -981,4 +975,4 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   return socket;
   
   }
-  
+
