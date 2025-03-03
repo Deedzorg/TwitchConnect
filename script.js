@@ -1,8 +1,48 @@
+const oauthToken = localStorage.getItem('twitchAccessToken');
+
+if (!oauthToken) {
+  // Redirect the user to the Twitch login page
+  // Alternatively, you could display a login modal and hide the main UI.
+  window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
+    new URLSearchParams({
+      client_id: '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
+      redirect_uri: 'https://yourusername.github.io/yourproject/callback.html',
+      response_type: 'token',
+      scope: 'user:read:email'
+    });
+} else {
+  // Continue with initializing the app since the token exists
+  // Optionally, fetch user data to set the username
+  fetch('https://api.twitch.tv/helix/users', {
+    headers: {
+      'Client-ID': '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
+      'Authorization': `Bearer ${oauthToken}`
+    }
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.data && data.data.length > 0) {
+        const username = data.data[0].display_name;
+        console.log('Logged in as:', username);
+        // Now start initializing your app
+        initApp();
+      } else {
+        console.error('No user data found.');
+      }
+    })
+    .catch(err => console.error('Error fetching user data:', err));
+}
+
+
+
 // --- Configuration ---
 // Replace with your actual Twitch credentials
-const clientId = 'gp762nuuoqcoxypju8c569th9wz7q5'; // Replace with your actual Client ID
-const oauthToken = 'tpla8ldxwa6o3h0co3enwywu5ldf5r'; // Ensure this token is valid
-const username = 'defnot_deedzthegoose'; // Must match the account for the OAuth token
+const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46';
+
+// Retrieve the OAuth token from localStorage (set after callback)
+
+// The username can be fetched later via the Twitch API once you have the token
+let username = null;
 
 // Global variables to store badges and emotes
 let globalBadges = {};
@@ -10,19 +50,61 @@ let globalEmotes = {};
 
 let trackedChannels = [];
 let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
+let channelPictures = {};
 
-
+let autoPokecatchEnabled = false;
 let lastCatchTime = 0;
 const CATCH_COOLDOWN = 5000;
 let first151Pokemon = [];
+let lastBallType = null;
 
-fetch('151.json')
-  .then(response => response.json())
-  .then(data => {
-    first151Pokemon = data;
-    console.log('Loaded first 151 Pokémon:', first151Pokemon);
+// --- UI Elements ---
+const chatContainer = document.getElementById("chat-container");
+
+// --- SLIDER FUNCTIONALITY ---
+let currentSlide = 0;
+
+// Login button handler: when the user clicks, redirect them to Twitch OAuth
+document.getElementById("twitch-login-btn").addEventListener("click", () => {
+  const redirectUri = encodeURIComponent('https://yourusername.github.io/yourproject/callback.html');
+  const responseType = 'token'; // use 'code' for Authorization Code Flow if you have a backend
+  const scopes = encodeURIComponent('user:read:email'); // specify additional scopes as needed
+  const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scopes}`;
+
+  window.location.href = authUrl;
+});
+
+// Example toggle for auto-pokecatch
+document.getElementById("togglePokecatch").addEventListener("click", function() {
+  autoPokecatchEnabled = !autoPokecatchEnabled;
+  this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
+  console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
+});
+
+// Check if the token is available; if not, prompt the user to log in.
+if (!oauthToken) {
+  // Optionally, hide parts of your UI until login, or display a message.
+  console.log("No OAuth token found. Please log in with Twitch.");
+  // For example, you might display a modal or enable only the login button.
+} else {
+  // Token exists; you might want to fetch the user's data here to set the username.
+  fetch('https://api.twitch.tv/helix/users', {
+    headers: {
+      'Client-ID': clientId,
+      'Authorization': `Bearer ${oauthToken}`
+    }
   })
-  .catch(error => console.error('Error loading Pokémon list:', error));
+    .then(response => response.json())
+    .then(data => {
+      if (data.data && data.data.length > 0) {
+        username = data.data[0].display_name;
+        console.log('Logged in as:', username);
+        // Continue initializing your app after successful login.
+        initApp();
+      }
+    })
+    .catch(err => console.error('Error fetching user data:', err));
+}
 
 
 // Initialize the application by fetching global badges and emotes
@@ -30,9 +112,57 @@ async function initApp() {
   await fetchGlobalBadges();
   await fetchGlobalEmotes();
   loadTrackedChannels();
+  checkLiveStatus();
   setInterval(checkLiveStatus, 60000);
 }
 initApp();
+
+
+
+
+
+
+
+
+// This code should run on the redirect page
+function getAccessTokenFromHash() {
+  const hash = window.location.hash;
+  const params = new URLSearchParams(hash.slice(1)); // remove the '#' at the beginning
+  return params.get('access_token');
+}
+
+const accessToken = getAccessTokenFromHash();
+if (accessToken) {
+  // Save the token (e.g., in localStorage or state management)
+  localStorage.setItem('twitchAccessToken', accessToken);
+  // You can now use the token to fetch user data or interact with Twitch APIs.
+  fetchTwitchUserData(accessToken);
+}
+
+function fetchTwitchUserData(token) {
+  fetch('https://api.twitch.tv/helix/users', {
+    headers: {
+      'Client-ID': '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.data && data.data.length > 0) {
+      const user = data.data[0];
+      console.log('Logged in as:', user.display_name);
+      // Update your UI with the user's name and profile picture, etc.
+    }
+  })
+  .catch(err => console.error('Error fetching user data:', err));
+}
+
+
+
+
+
+
+
 
 // --- Global API functions ---
 async function fetchGlobalBadges() {
@@ -142,11 +272,27 @@ async function fetchChannelEmotes(broadcasterId) {
   return channelEmotes;
 }
 
-// --- UI Elements ---
-const chatContainer = document.getElementById("chat-container");
+async function fetchChannelPicture(channel) {
+  // Return from cache if available
+  if (channelPictures[channel]) {
+    return channelPictures[channel];
+  }
+  
+  const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+    headers: {
+      'Client-ID': clientId,
+      'Authorization': `Bearer ${storedOauthToken || oauthToken}` // Use stored token if available
+    }
+  });
+  const data = await response.json();
+  if (data.data && data.data.length > 0) {
+    const imgUrl = data.data[0].profile_image_url;
+    channelPictures[channel] = imgUrl; // Cache it
+    return imgUrl;
+  }
+  return null; // fallback if not found
+}
 
-// --- SLIDER FUNCTIONALITY ---
-let currentSlide = 0;
 function slideChats(direction) {
   const container = document.getElementById("chat-container");
   const chatBoxes = container.children;
@@ -174,8 +320,6 @@ function sendGlobalMessage() {
   globalInput.value = "";
 }
 
-
-
 function addTrackedChannel() {
   const input = document.getElementById("newTrackedChannel");
   let channel = input.value.trim();
@@ -193,49 +337,204 @@ function removeTrackedChannel(channel) {
   updateTrackedChannelsUI(); 
 }
 
-function updateTrackedChannelsUI() {
-  const list = document.getElementById("trackedChannelsList");
-  list.innerHTML = "";
-  trackedChannels.forEach(channel => {
+async function fetchChannelPicture(channel) {
+  try{
+  // Return from cache if available
+  if (channelPictures[channel]) {
+
+    return channelPictures[channel];
+  }
+  
+  const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+    headers: {
+      'Client-ID': clientId,
+      'Authorization': `Bearer ${oauthToken}` // Use stored token if available
+    }
+  });
+  if (!response.ok) {
+    console.error(`Error fetching user data for ${channel}: ${response.status} - ${response.statusText}`);
+      channelPictures[channel] = null; // clear the cache on error
+    return null; // fallback if not found
+  }
+  const data = await response.json();
+  if (data.data && data.data.length > 0) {
+    const imgUrl = data.data[0].profile_image_url;
+    channelPictures[channel] = imgUrl; // Cache it
+    console.log(`Picture fetched and cached for ${channel}: ${imgUrl}`); // Debugging log
+    return imgUrl;
+  }
+      console.log(`No user data found for ${channel}`); // Debugging log
+      channelPictures[channel] = null; // clear the cache on error
+      return null; // fallback if not found
+  } catch (error) {
+      console.error(`Error fetching user data for ${channel}`, error);
+      channelPictures[channel] = null; // clear the cache on error
+      return null; // fallback if not found
+  }
+}
+
+async function createChannelElement(channel) {
     const li = document.createElement("li");
-    li.textContent = channel;
+    li.style.margin = "5px 0";
+    li.style.display = "flex";
+    li.style.flexDirection = "column"; // Stack items vertically
+    li.style.alignItems = "center"; // Center items horizontally
+  
+    // 1. Create the <img> element
+    const img = document.createElement("img");
+    img.style.width = "50px"; // Set a width
+    img.style.height = "50px"; // Set a height
+    img.style.borderRadius = "50%"; // Make it circular
+    img.style.marginBottom = "5px";
+  
+    // 2. Set the src (and handle the async fetch)
+    try {
+        const imgUrl = await fetchChannelPicture(channel);
+        img.src = imgUrl || "default-image.png"; // Fallback to a default if not found
+        img.alt = `Profile picture for ${channel}`; // Add alt text
+        li.appendChild(img);
+    } catch (error) {
+        console.error(`Error fetching/displaying image for ${channel}`, error);
+        img.src = "default-image.png";
+        li.appendChild(img);
+    }
+  
+    // Add the live indicator (if live)
+    if (liveChannelsStatus[channel]) {
+        const liveIndicator = document.createElement("span");
+        liveIndicator.textContent = "● ";
+        liveIndicator.style.color = "red";
+        liveIndicator.style.fontWeight = "bold";
+        li.prepend(liveIndicator); // Add indicator
+    }
+  
+    // Add the channel name
+    const channelText = document.createElement("span");
+    channelText.textContent = channel;
+    li.appendChild(channelText);
+  
+    // Add the remove button
     const removeBtn = document.createElement("button");
     removeBtn.textContent = "Remove";
     removeBtn.style.marginLeft = "10px";
     removeBtn.onclick = () => removeTrackedChannel(channel);
     li.appendChild(removeBtn);
-    list.appendChild(li);
-  });
+    
+    return li;
+  }
   
-}
+  function updateTrackedChannelsUI() {
+    const list = document.getElementById("trackedChannelsList");
+    list.innerHTML = ""; // Clear existing list items
+  
+    // Create promises for each channel and wait for them to resolve
+    const channelPromises = trackedChannels.map(createChannelElement);
+    Promise.all(channelPromises)
+        .then(channelElements => {
+            // Append elements to the list once all are created
+            channelElements.forEach(li => list.appendChild(li));
+        }).catch(error => {
+            console.error("Error updating tracked channels:", error);
+        });
+    saveTrackedChannels()
+  }
 
-// --- EMOTE PICKER FUNCTIONALITY ---
+async function checkLiveStatus() {
+    if (!trackedChannels.length) return;
+    
+    // Build query parameters for each tracked channel
+    const query = trackedChannels
+      .map(channel => `user_login=${encodeURIComponent(channel)}`)
+      .join("&");
+    
+    const response = await fetch(`https://api.twitch.tv/helix/streams?${query}`, {
+      headers: {
+        "Client-ID": clientId,
+        "Authorization": `Bearer ${oauthToken}`
+      }
+    });
+    const data = await response.json();
+    
+    // Reset status for all tracked channels to false
+    trackedChannels.forEach(channel => {
+      liveChannelsStatus[channel] = false;
+    });
+    
+    // If a channel is live, mark it as true
+    if (data.data) {
+      data.data.forEach(stream => {
+        const channel = stream.user_login.toLowerCase();
+        liveChannelsStatus[channel] = true;
+      });
+    }
+    // Update the UI to reflect live status
+    updateTrackedChannelsUI();
+    // Open chats for live channels and close for offline channels
+    trackedChannels.forEach(channel => {
+      if (liveChannelsStatus[channel]) {
+        if (!isChatOpen(channel)) {
+          console.log(`Opening chat for ${channel} (live)`);
+          openChat(channel);
+        }
+      } else {
+        if (isChatOpen(channel)) {
+          console.log(`Closing chat for ${channel} (offline)`);
+          closeChat(channel);
+        }
+      }
+    });
+  }
+
 function toggleEmotePicker(context) {
   let inputField, pickerDiv;
+  let combinedEmotes; // Declare combinedEmotes here
+
   if (context === 'global') {
     inputField = document.getElementById("globalMessage");
     pickerDiv = document.getElementById("globalEmotePicker");
+    combinedEmotes = globalEmotes; // Use global emotes for global picker
   } else {
     // For per-chat input, context is an object {input: ..., picker: ...}
     inputField = context.input;
     pickerDiv = context.picker;
+    // Find the chat box associated with the picker
+    const chatBox = pickerDiv.closest('.chat-box');
+    // Extract channel from data attribute
+    const channel = chatBox.dataset.channel;
+        // Retrieve combined emotes from chatbox, using it's channel to access it
+        combinedEmotes = getCombinedEmotesForChannel(channel);
   }
+
   pickerDiv.classList.toggle("active");
   // Populate picker if active and not already populated
   if (pickerDiv.classList.contains("active") && pickerDiv.childElementCount === 0) {
-    for (let emote in globalEmotes) {
+    for (let emote in combinedEmotes) {
       const img = document.createElement("img");
-      img.src = globalEmotes[emote];
+      img.style.cursor = "pointer";
+      img.src = combinedEmotes[emote];
       img.alt = emote;
       img.title = emote;
       img.onclick = () => {
         insertAtCursor(inputField, emote + " ");
+        pickerDiv.classList.remove("active"); //close on click
       };
       pickerDiv.appendChild(img);
     }
   }
 }
 
+function getCombinedEmotesForChannel(channel) {
+  // Find the chat box that matches the current channel
+  const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
+  
+  // Check if chatBox exists and has the emotes stored
+  if (chatBox && chatBox.combinedEmotes) {
+      return chatBox.combinedEmotes;
+  } else {
+      console.warn(`Emotes not found for channel: ${channel}`);
+      return globalEmotes; // fallback
+  }
+}
 // Helper to insert text at cursor in input field
 function insertAtCursor(input, textToInsert) {
   const start = input.selectionStart;
@@ -286,10 +585,13 @@ async function addChat(providedChannel) {
   });
   const combinedEmotes = { ...globalEmotes, ...channelEmotes };
 
+ 
   // Create chat box UI
   const chatBox = document.createElement("div");
   chatBox.className = "chat-box";
   chatBox.dataset.channel = channel;
+  chatBox.combinedEmotes = combinedEmotes;
+
 
   // Chat header
   const header = document.createElement("div");
@@ -308,6 +610,7 @@ async function addChat(providedChannel) {
     chatBox.remove();
     slideChats(0);
   };
+  
   header.appendChild(closeButton);
   chatBox.appendChild(header);
 
@@ -336,7 +639,21 @@ async function addChat(providedChannel) {
   const pickerDiv = document.createElement("div");
   pickerDiv.className = "emote-picker";
   emoteBtn.onclick = () => toggleEmotePicker({ input: inputField, picker: pickerDiv });
+  
+  // Populate picker if active and not already populated
+  if (pickerDiv.childElementCount === 0) {
+    for (let emote in combinedEmotes) {
+      const img = document.createElement("img");
+      img.style.cursor = "pointer";
+      img.src = combinedEmotes[emote];
+      img.alt = emote;
+      img.title = emote;
+      img.onclick = () => { insertAtCursor(inputField, emote + " "); };
+      pickerDiv.appendChild(img);
+    }
+  }
   inputDiv.appendChild(emoteBtn);
+  inputDiv.appendChild(pickerDiv);
 
   const sendButton = document.createElement("button");
   sendButton.textContent = "Send";
@@ -362,8 +679,29 @@ function sendChatMessage(socket, channel, inputField) {
   const message = inputField.value;
   if (message && socket.readyState === WebSocket.OPEN) {
     socket.send(`PRIVMSG #${channel} :${message}\r\n`);
+    // Optionally, display the sent message in the chat window
+    displaySentMessage(channel, message);
     inputField.value = "";
   }
+}
+
+function displaySentMessage(channel, message) {
+  // Create a chat message element just like when receiving a message
+  const chatWindow = document.querySelector(`.chat-box[data-channel="${channel}"] .messages`);
+  if (!chatWindow) return;
+  
+  const timestamp = new Date().toLocaleTimeString(); // Optional: change format as needed
+  
+  const messageElem = document.createElement("div");
+  messageElem.className = "chat-message";
+  
+  // Create a span for the message text
+  const messageText = document.createElement("span");
+  messageText.textContent = `[${timestamp}] You: ${message}`;
+  messageElem.appendChild(messageText);
+  
+  chatWindow.appendChild(messageElem);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
 function sanitize(text) {
@@ -420,17 +758,13 @@ function parseTags(tagString) {
   });
   return tags;
 }
-
-
 function isChatOpen(channel) {
   return document.querySelector(`.chat-box[data-channel="${channel}"]`) !== null;
 }
-
 // Opens a chat for the given channel by calling addChat()
 async function openChat(channel) {
   await addChat(channel);
 }
-
 // Closes the chat for the given channel, if open
 function closeChat(channel) {
   const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
@@ -443,9 +777,7 @@ function closeChat(channel) {
     console.log(`Closed chat for ${channel}`);
   }
 }
-
 // Lets the user modify the tracked channels list via a prompt
-
 function manageTrackedChannels() {
   // Prompt user for comma-separated channels
   const input = prompt("Enter channels to track (comma-separated):");
@@ -458,7 +790,6 @@ function manageTrackedChannels() {
     console.log("Tracked channels:", trackedChannels);
   }
 }
-
 // Poll Twitch's Get Streams API for tracked channels and open/close chats accordingly
 async function checkLiveStatus() {
   if (!trackedChannels.length) return;
@@ -488,11 +819,8 @@ async function checkLiveStatus() {
       liveChannelsStatus[channel] = true;
     });
   }
-  
   // Update the UI to reflect live status
   updateTrackedChannelsUI();
-  
-  
   // Open chats for live channels and close for offline channels
   trackedChannels.forEach(channel => {
     if (liveChannelsStatus[channel]) {
@@ -508,8 +836,6 @@ async function checkLiveStatus() {
     }
   });
 }
-
-
 // Toggle the visibility of the channel manager UI
 function toggleChannelManager() {
   const manager = document.getElementById("channelManager");
@@ -521,7 +847,6 @@ function toggleChannelManager() {
     manager.style.display = "none";
   }
 }
-
 // Add a new channel to the trackedChannels list
 function addTrackedChannel() {
   const input = document.getElementById("newTrackedChannel");
@@ -555,40 +880,6 @@ function removeTrackedChannel(channel) {
   updateTrackedChannelsUI();
 }
 
-// Update the displayed list of tracked channels
-function updateTrackedChannelsUI() {
-  const list = document.getElementById("trackedChannelsList");
-  list.innerHTML = "";
-  trackedChannels.forEach(channel => {
-    const li = document.createElement("li");
-    li.style.margin = "5px 0";
-    
-    // If the channel is live, prepend a live indicator
-    if (liveChannelsStatus[channel]) {
-      const liveIndicator = document.createElement("span");
-      liveIndicator.textContent = "● ";
-      liveIndicator.style.color = "red";
-      liveIndicator.style.fontWeight = "bold";
-      li.appendChild(liveIndicator);
-    }
-    
-    // Add the channel name
-    const channelText = document.createElement("span");
-    channelText.textContent = channel;
-    li.appendChild(channelText);
-    
-    // Add the remove button
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove";
-    removeBtn.style.marginLeft = "10px";
-    removeBtn.onclick = () => removeTrackedChannel(channel);
-    li.appendChild(removeBtn);
-    
-    list.appendChild(li);
-  });
-}
-
-
 function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
 
@@ -599,69 +890,140 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     socket.send(`NICK ${username}\r\n`);
     socket.send(`JOIN #${channel}\r\n`);
   };
-
-
+  
+  function handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName) {
+    // Check for a wild Pokémon appearance message
+    if (
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      /A wild (.+) appears/i.test(rawMessage) &&
+      Date.now() - lastCatchTime > CATCH_COOLDOWN &&
+      socket.readyState === WebSocket.OPEN
+    ) {
+      const pokemonMatch = rawMessage.match(/A wild (.+) appears/i);
+      if (pokemonMatch) {
+        const pokemonName = pokemonMatch[1].toLowerCase();
+  
+        console.log(`Attempting to catch ${pokemonName} with pokeball in #${channelName}`);
+        sendChatMessage(socket, channelName, "!pokecatch");
+  
+        // Set last ball type to pokeball since that's all we're using now.
+        lastBallType = "pokeball";
+        lastCatchTime = Date.now();
+      }
+    }
+  
+    // Error handling: if we receive a message saying "You don't own that ball."
+    if (
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      /You don't own that ball\./i.test(rawMessage) &&
+      /@\w+ You don't own that ball\./i.test(rawMessage) &&
+      rawMessage.toLowerCase().includes(`@${username.toLowerCase()}`)
+    ) {
+      console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
+      console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
+      sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
+  
+      // Wait briefly to allow the purchase to process, then attempt to catch with the pokeball
+      setTimeout(() => {
+        console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
+        sendChatMessage(socket, channelName, "!pokecatch");
+      }, 500);
+    }
+  
+    // Error handling: if we receive a message saying "You don't have any Poké Balls."
+    if (
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      /You don't have any Poké Balls\./i.test(rawMessage)
+    ) {
+      console.log(`Detected "You don't have any Poké Balls." message in #${channelName}`);
+      console.log(`No pokeball available in #${channelName}. Purchasing 5 pokeballs...`);
+      sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
+  
+      // Wait briefly to allow the purchase to process, then attempt to catch with the pokeball
+      setTimeout(() => {
+        console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
+        sendChatMessage(socket, channelName, "!pokecatch");
+      }, 500);
+    }
+  }
+  
+  function sendChatMessage(socket, channelName, message) {
+    socket.send(`PRIVMSG #${channelName} :${message}\r\n`);
+  }
+  
+  
   socket.onmessage = (event) => {
     console.log(`[${channel}] Received:`, event.data);
-    
+  
     if (event.data.startsWith("PING")) {
       socket.send("PONG :tmi.twitch.tv\r\n");
       return;
     }
-    
+  
     if (event.data.includes('NOTICE * :Login authentication failed')) {
       console.error('Authentication failed: Invalid OAuth token or username.');
       alert('Authentication failed: Invalid OAuth token or username.');
       socket.close();
       return;
     }
-    
+  
     if (event.data.includes('NOTICE') && event.data.includes('Improperly formatted auth')) {
       console.error('Improperly formatted auth');
       alert('Improperly formatted auth');
       socket.close();
       return;
     }
-    
+  
     let tags = {};
     let messageData = event.data;
-    
+  
     if (messageData.startsWith("@")) {
       const splitData = messageData.split(" ");
       tags = parseTags(splitData[0].substring(1));
       messageData = splitData.slice(1).join(" ");
     }
-    
+  
     // Extract common parts
     const regex = /:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #(\w+) :(.*)/;
     const match = messageData.match(regex);
     if (!match) return;
-    
+  
     const displayName = tags["display-name"] || match[1];
     const channelName = match[2];
     const rawMessage = match[3].trim();
     const userColor = (tags["color"] && tags["color"].trim() !== "") ? tags["color"] : "#ffffff";
-    
+    // Create a timestamp element
+    // Optionally style it in your CSS (e.g., smaller, gray font)
+    // Then prepend it to your message element:
+  
+    const timestampElem = document.createElement("span");
+    timestampElem.className = "timestamp";
+    timestampElem.textContent = `[${new Date().toLocaleTimeString()}] `;
+  
     // Build the message element
     const usernameElem = document.createElement("span");
     usernameElem.className = "username";
     usernameElem.textContent = displayName + ": ";
     usernameElem.style.color = userColor;
-    
+  
     const badgesStr = tags["badges"] || "";
     const badgeImages = createBadgeImages(badgesStr, badges);
-    
+  
     const messageFragment = parseEmotesInText(rawMessage, emotes);
-    
+  
     const messageElem = document.createElement("div");
     messageElem.className = "chat-message";
     badgeImages.forEach(img => messageElem.appendChild(img));
+    messageElem.appendChild(timestampElem);
     messageElem.appendChild(usernameElem);
     messageElem.appendChild(messageFragment);
-    
+  
     chatWindow.appendChild(messageElem);
     chatWindow.scrollTop = chatWindow.scrollHeight;
-    
+  
     // --- Command Checks ---
     // Check for !honk command
     if (rawMessage === "!honk") {
@@ -670,42 +1032,12 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         socket.send(`PRIVMSG #${channelName} :honk\r\n`);
       }
     }
-    
-    // Auto-Pokecatch logic for PokemonCommunityGame alerts
-    if (
-      displayName === "PokemonCommunityGame" &&
-      /A wild (.+) appears/i.test(rawMessage)
-    ) {
-      const pokemonMatch = rawMessage.match(/A wild (.+) appears/i);
-      if (pokemonMatch) {
-        const pokemonName = pokemonMatch[1].toLowerCase();
-        if (first151Pokemon.includes(pokemonName)) {
-          if (Date.now() - lastCatchTime > CATCH_COOLDOWN) {
-            if (socket.readyState === WebSocket.OPEN) {
-              console.log(`Sending !pokeshop ultraball 1 in #${channelName}`);
-              socket.send(`PRIVMSG #${channelName} :!pokeshop ultraball 1\r\n`);
-              setTimeout(() => {
-                console.log(`Sending !pokecatch ultraball in #${channelName}`);
-                socket.send(`PRIVMSG #${channelName} :!pokecatch ultraball\r\n`);
-              }, 500);
-              lastCatchTime = Date.now();
-            }
-          }
-        } else {
-          if (Date.now() - lastCatchTime > CATCH_COOLDOWN) {
-            if (socket.readyState === WebSocket.OPEN) {
-              console.log(`Sending !pokecatch in #${channelName}`);
-              socket.send(`PRIVMSG #${channelName} :!pokecatch\r\n`);
-              lastCatchTime = Date.now();
-            }
-          }
-        }
-      }
-    }
+      handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName)
   };
   
   socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
   socket.onclose = () => console.log(`🔌 Disconnected from #${channel}`);
   return socket;
   
-}
+  }
+  

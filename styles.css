@@ -77,14 +77,14 @@ button {
 /* Close Button */
 .close-btn {
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: -5px;
+  top: -1px;
   width: 28px;
   height: 28px;
   border: none;
   border-radius: 50%;
-  background: #ff4f4f;
-  color: #fff;
+  background: #3b08083e;
+  color: #fffed8;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
@@ -95,7 +95,7 @@ button {
 }
 
 .close-btn:hover {
-  background: #ff6f6f;
+  background: #a72424;
   transform: scale(1.1);
 }
 
@@ -248,3 +248,20 @@ button {
 .emote-picker img:hover {
   transform: scale(1.1);
 }
+
+/* CSS for Responsive Columns */
+#trackedChannelsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive columns */
+  gap: 10px; /* Space between items */
+}
+
+#trackedChannelsList li{
+  border: 1px solid grey;
+  border-radius: 5px;
+  padding: 5px;
+}
+
