@@ -34,13 +34,8 @@ if (!oauthToken) {
 
 
 // --- Configuration ---
-// Replace with your actual Twitch credentials
 const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46';
-
-// Retrieve the OAuth token from localStorage (set after callback)
-
-// The username can be fetched later via the Twitch API once you have the token
-let username = null;
+let username = null; // This will be set when fetching user data
 
 // Global variables to store badges and emotes
 let globalBadges = {};
@@ -62,16 +57,6 @@ const chatContainer = document.getElementById("chat-container");
 // --- SLIDER FUNCTIONALITY ---
 let currentSlide = 0;
 
-// Login button handler: when the user clicks, redirect them to Twitch OAuth
-document.getElementById("twitch-login-btn").addEventListener("click", () => {
-  const redirectUri = encodeURIComponent('https://deedzorg.github.io/TwitchConnect/callback.html');
-  const responseType = 'token'; // use 'code' for Authorization Code Flow if you have a backend
-  const scopes = encodeURIComponent('user:read:email'); // specify additional scopes as needed
-  const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scopes}`;
-
-  window.location.href = authUrl;
-});
-
 // Example toggle for auto-pokecatch
 document.getElementById("togglePokecatch").addEventListener("click", function() {
   autoPokecatchEnabled = !autoPokecatchEnabled;
@@ -79,30 +64,15 @@ document.getElementById("togglePokecatch").addEventListener("click", function() 
   console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
 });
 
-// Check if the token is available; if not, prompt the user to log in.
-if (!oauthToken) {
-  // Optionally, hide parts of your UI until login, or display a message.
-  console.log("No OAuth token found. Please log in with Twitch.");
-  // For example, you might display a modal or enable only the login button.
-} else {
-  // Token exists; you might want to fetch the user's data here to set the username.
-  fetch('https://api.twitch.tv/helix/users', {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
-    }
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.data && data.data.length > 0) {
-        username = data.data[0].display_name;
-        console.log('Logged in as:', username);
-        // Continue initializing your app after successful login.
-        initApp();
-      }
-    })
-    .catch(err => console.error('Error fetching user data:', err));
-}
+// Login button handler: when the user clicks, redirect them to Twitch OAuth
+document.getElementById("twitch-login-btn").addEventListener("click", () => {
+  const redirectUri = encodeURIComponent('https://deedzorg.github.io/TwitchConnect/callback.html');
+  const responseType = 'token';
+  const scopes = encodeURIComponent('user:read:email');
+  const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scopes}`;
+
+  window.location.href = authUrl;
+});
 
 
 // Initialize the application by fetching global badges and emotes
