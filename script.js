@@ -1,6 +1,8 @@
 // --- Global Configuration ---
 const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46';
 let username = null; // This will be set when fetching user data
+let oauthToken = null; // Declare it globally
+
 
 // Global variables to store badges and emotes
 let globalBadges = {};
@@ -28,20 +30,8 @@ async function initApp() {
   setInterval(checkLiveStatus, 60000);
 }
 
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Get UI elements
-  const chatContainer = document.getElementById("chat-container");
-  
-  // Set up toggle for auto-pokecatch
-  document.getElementById("togglePokecatch").addEventListener("click", function() {
-    autoPokecatchEnabled = !autoPokecatchEnabled;
-    this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
-    console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
-  });
-  
-  // Check for the OAuth token before initializing the app
-  const oauthToken = localStorage.getItem('twitchAccessToken');
+  oauthToken = localStorage.getItem('twitchAccessToken'); // Assign globally
 
   if (!oauthToken) {
     // No token found—redirect the user to Twitch's login page
@@ -65,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.data && data.data.length > 0) {
           username = data.data[0].display_name;
           console.log('Logged in as:', username);
+          
           // Now initialize your app after authentication and DOM is ready
           initApp();
         } else {
@@ -74,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(err => console.error('Error fetching user data:', err));
   }
 });
-
 
 
 
@@ -114,35 +104,31 @@ function fetchTwitchUserData(token) {
 
 
 
+async function fetchGlobalBadges() {
+  const token = oauthToken || localStorage.getItem('twitchAccessToken'); // Ensure it's fetched
+  if (!token) {
+    console.error("OAuth token missing in fetchGlobalBadges");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.twitch.tv/helix/chat/badges/global", {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Client-Id": clientId
+      }
+    });
+    const data = await response.json();
+    console.log("Global Badges:", data);
+  } catch (error) {
+    console.error("Error fetching global badges:", error);
+  }
+}
 
 
 
 
 // --- Global API functions ---
-async function fetchGlobalBadges() {
-  const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${oauthToken}`
-    }
-  });
-  const data = await response.json();
-  console.log('Global Badges API Response:', data);
-  if (!response.ok) {
-    console.error(`Error fetching global badges: ${data.message} (Status: ${response.status})`);
-    return;
-  }
-  if (!data.data) {
-    console.error('Unexpected API response structure for global badges:', data);
-    return;
-  }
-  data.data.forEach(set => {
-    globalBadges[set.set_id] = {};
-    set.versions.forEach(version => {
-      globalBadges[set.set_id][version.id] = version.image_url_1x;
-    });
-  });
-}
 
 async function fetchGlobalEmotes() {
   const response = await fetch('https://api.twitch.tv/helix/chat/emotes/global', {
