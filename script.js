@@ -128,6 +128,54 @@ async function fetchGlobalBadges() {
 }
 
 
+function toggleChannelManager() {
+  const manager = document.getElementById("channelManager");
+  if (manager.style.display === "none" || manager.style.display === "") {
+    manager.style.display = "block";
+    // Immediately update live status when opening the manager
+    checkLiveStatus();
+  } else {
+    manager.style.display = "none";
+  }
+}
+
+function toggleEmotePicker(context) {
+  let inputField, pickerDiv;
+  let combinedEmotes; // Declare combinedEmotes here
+
+  if (context === 'global') {
+    inputField = document.getElementById("globalMessage");
+    pickerDiv = document.getElementById("globalEmotePicker");
+    combinedEmotes = globalEmotes; // Use global emotes for global picker
+  } else {
+    // For per-chat input, context is an object {input: ..., picker: ...}
+    inputField = context.input;
+    pickerDiv = context.picker;
+    // Find the chat box associated with the picker
+    const chatBox = pickerDiv.closest('.chat-box');
+    // Extract channel from data attribute
+    const channel = chatBox.dataset.channel;
+    // Retrieve combined emotes from chatbox, using its channel to access it
+    combinedEmotes = getCombinedEmotesForChannel(channel);
+  }
+
+  pickerDiv.classList.toggle("active");
+  // Populate picker if active and not already populated
+  if (pickerDiv.classList.contains("active") && pickerDiv.childElementCount === 0) {
+    for (let emote in combinedEmotes) {
+      const img = document.createElement("img");
+      img.style.cursor = "pointer";
+      img.src = combinedEmotes[emote];
+      img.alt = emote;
+      img.title = emote;
+      img.onclick = () => {
+        insertAtCursor(inputField, emote + " ");
+        pickerDiv.classList.remove("active"); //close on click
+      };
+      pickerDiv.appendChild(img);
+    }
+  }
+}
 
 
 // --- Global API functions ---
