@@ -11,6 +11,7 @@ let globalEmotes = {};
 let trackedChannels = [];
 let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
 let channelPictures = {};
+let currentSlide = 0;
 
 let autoPokecatchEnabled = false;
 let lastCatchTime = 0;
