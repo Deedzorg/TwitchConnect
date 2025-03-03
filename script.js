@@ -246,6 +246,9 @@ function slideChats(direction) {
   container.style.transform = `translateX(-${currentSlide * chatBoxWidth}px)`;
 }
 
+// Ensure currentSlide is defined before it is used
+let currentSlide = 0;
+
 // --- GLOBAL MESSAGE FUNCTIONALITY ---
 function sendGlobalMessage() {
   const globalInput = document.getElementById("globalMessage");
