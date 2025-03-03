@@ -1,38 +1,4 @@
-// Check for the OAuth token before initializing the app
-const oauthToken = localStorage.getItem('twitchAccessToken');
-
-if (!oauthToken) {
-  window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
-    new URLSearchParams({
-      client_id: '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
-      redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
-      response_type: 'token',
-      scope: 'user:read:email chat:read chat:edit'
-    });
-} else {
-  // Token exists—fetch user data and initialize the app
-  fetch('https://api.twitch.tv/helix/users', {
-    headers: {
-      'Client-ID': '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
-      'Authorization': `Bearer ${oauthToken}`
-    }
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.data && data.data.length > 0) {
-        const username = data.data[0].display_name;
-        console.log('Logged in as:', username);
-        // Now initialize your app
-        initApp();
-      } else {
-        console.error('No user data found.');
-      }
-    })
-    .catch(err => console.error('Error fetching user data:', err));
-}
-
-
-// --- Configuration ---
+// --- Global Configuration ---
 const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46';
 let username = null; // This will be set when fetching user data
 
@@ -50,28 +16,7 @@ const CATCH_COOLDOWN = 5000;
 let first151Pokemon = [];
 let lastBallType = null;
 
-// --- UI Elements ---
-const chatContainer = document.getElementById("chat-container");
 
-// --- SLIDER FUNCTIONALITY ---
-let currentSlide = 0;
-
-// Example toggle for auto-pokecatch
-document.getElementById("togglePokecatch").addEventListener("click", function() {
-  autoPokecatchEnabled = !autoPokecatchEnabled;
-  this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
-  console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
-});
-
-// Login button handler: when the user clicks, redirect them to Twitch OAuth
-document.getElementById("twitch-login-btn").addEventListener("click", () => {
-  const redirectUri = encodeURIComponent('https://deedzorg.github.io/TwitchConnect/callback.html');
-  const responseType = 'token';
-  const scopes = encodeURIComponent('user:read:email');
-  const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scopes}`;
-
-  window.location.href = authUrl;
-});
 
 
 // Initialize the application by fetching global badges and emotes
@@ -82,11 +27,56 @@ async function initApp() {
   checkLiveStatus();
   setInterval(checkLiveStatus, 60000);
 }
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Get UI elements
+  const chatContainer = document.getElementById("chat-container");
+  
+  // Set up toggle for auto-pokecatch
+  document.getElementById("togglePokecatch").addEventListener("click", function() {
+    autoPokecatchEnabled = !autoPokecatchEnabled;
+    this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
+    console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
+  });
+  
+  // Check for the OAuth token before initializing the app
+  const oauthToken = localStorage.getItem('twitchAccessToken');
+
+  if (!oauthToken) {
+    // No token found—redirect the user to Twitch's login page
+    window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
+      new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
+        response_type: 'token',
+        scope: 'user:read:email chat:read chat:edit'
+      });
+  } else {
+    // Token exists—fetch user data and initialize the app
+    fetch('https://api.twitch.tv/helix/users', {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}`
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.data && data.data.length > 0) {
+          username = data.data[0].display_name;
+          console.log('Logged in as:', username);
+          // Now initialize your app after authentication and DOM is ready
+          initApp();
+        } else {
+          console.error('No user data found.');
+        }
+      })
+      .catch(err => console.error('Error fetching user data:', err));
+  }
+});
+
+
 initApp();
-
-
-
-
 
 
 
