@@ -76,9 +76,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-initApp();
-
-
 
 
 // This code should run on the redirect page

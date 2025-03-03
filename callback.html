@@ -6,18 +6,21 @@
 </head>
 <body>
   <script>
-    // Extract access token from URL hash
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.slice(1)); // Remove the '#' character
-    const accessToken = params.get('access_token');
-
+    // Extract the access token from the URL hash
+    function getAccessTokenFromHash() {
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.slice(1)); // remove the '#' at the beginning
+      return params.get('access_token');
+    }
+    const accessToken = getAccessTokenFromHash();
     if (accessToken) {
-      // Store the token for the main app to use
+      // Save the token
       localStorage.setItem('twitchAccessToken', accessToken);
-      // Redirect to the main page
+      // Optionally, fetch user data here if needed
+      // Then redirect to your main page:
       window.location.href = 'index.html';
     } else {
-      document.body.textContent = 'Authentication failed. Please try logging in again.';
+      document.body.textContent = 'Authentication failed. Please try again.';
     }
   </script>
 </body>
