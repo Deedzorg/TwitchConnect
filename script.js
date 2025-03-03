@@ -2,13 +2,12 @@
 const oauthToken = localStorage.getItem('twitchAccessToken');
 
 if (!oauthToken) {
-  // No token found—redirect the user to Twitch's login page
   window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
     new URLSearchParams({
       client_id: '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
       redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
       response_type: 'token',
-      scope: 'user:read:email'
+      scope: 'user:read:email chat:read chat:edit'
     });
 } else {
   // Token exists—fetch user data and initialize the app
