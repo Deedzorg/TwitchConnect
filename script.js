@@ -1,8 +1,8 @@
+// Check for the OAuth token before initializing the app
 const oauthToken = localStorage.getItem('twitchAccessToken');
 
 if (!oauthToken) {
-  // Redirect the user to the Twitch login page
-  // Alternatively, you could display a login modal and hide the main UI.
+  // No token found—redirect the user to Twitch's login page
   window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
     new URLSearchParams({
       client_id: '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
@@ -11,8 +11,7 @@ if (!oauthToken) {
       scope: 'user:read:email'
     });
 } else {
-  // Continue with initializing the app since the token exists
-  // Optionally, fetch user data to set the username
+  // Token exists—fetch user data and initialize the app
   fetch('https://api.twitch.tv/helix/users', {
     headers: {
       'Client-ID': '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
@@ -24,7 +23,7 @@ if (!oauthToken) {
       if (data.data && data.data.length > 0) {
         const username = data.data[0].display_name;
         console.log('Logged in as:', username);
-        // Now start initializing your app
+        // Now initialize your app
         initApp();
       } else {
         console.error('No user data found.');
@@ -32,7 +31,6 @@ if (!oauthToken) {
     })
     .catch(err => console.error('Error fetching user data:', err));
 }
-
 
 
 // --- Configuration ---
