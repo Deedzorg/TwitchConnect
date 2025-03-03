@@ -31,9 +31,9 @@ async function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Ensure chatContainer is defined
-  const chatContainer = document.getElementById("chat-container");
-  if (!chatContainer) {
+  // Define chatContainer globally
+  window.chatContainer = document.getElementById("chat-container");
+  if (!window.chatContainer) {
     console.error("chatContainer is missing from the DOM.");
     return;
   }
