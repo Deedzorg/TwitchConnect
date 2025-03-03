@@ -6,7 +6,7 @@ if (!oauthToken) {
   window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
     new URLSearchParams({
       client_id: '1cvmce5wrxeuk4hpfgd4ssfthiwx46',
-      redirect_uri: 'https://yourusername.github.io/yourproject/callback.html',
+      redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
       response_type: 'token',
       scope: 'user:read:email'
     });
@@ -66,7 +66,7 @@ let currentSlide = 0;
 
 // Login button handler: when the user clicks, redirect them to Twitch OAuth
 document.getElementById("twitch-login-btn").addEventListener("click", () => {
-  const redirectUri = encodeURIComponent('https://yourusername.github.io/yourproject/callback.html');
+  const redirectUri = encodeURIComponent('https://deedzorg.github.io/TwitchConnect/callback.html');
   const responseType = 'token'; // use 'code' for Authorization Code Flow if you have a backend
   const scopes = encodeURIComponent('user:read:email'); // specify additional scopes as needed
   const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scopes}`;
