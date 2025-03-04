@@ -255,13 +255,16 @@ button {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive columns */
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Responsive columns */
   gap: 10px; /* Space between items */
+  width: 100%; /* Take up the full width of the container */
+  max-width: 100%; /* Ensure it doesn't overflow */
 }
 
-#trackedChannelsList li{
+#trackedChannelsList li {
   border: 1px solid grey;
   border-radius: 5px;
   padding: 5px;
+  min-width: 100px; /* prevent item from getting to small */
 }
 

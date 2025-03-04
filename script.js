@@ -137,7 +137,6 @@ function toggleEmotePicker(context) {
 }
 
 // --- Global API functions ---
-
 async function fetchGlobalEmotes() {
   const response = await fetch('https://api.twitch.tv/helix/chat/emotes/global', {
     headers: {
@@ -668,6 +667,7 @@ function parseTags(tagString) {
 function isChatOpen(channel) {
   return document.querySelector(`.chat-box[data-channel="${channel}"]`) !== null;
 }
+
 // Opens a chat for the given channel by calling addChat()
 async function openChat(channel) {
   await addChat(channel);
@@ -829,28 +829,10 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       autoPokecatchEnabled &&
       displayName === "PokemonCommunityGame" &&
       /You don't own that ball\./i.test(rawMessage) &&
-      /@\w+ You don't own that ball\./i.test(rawMessage) &&
       rawMessage.toLowerCase().includes(`@${username.toLowerCase()}`)
     ) {
       console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
       console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
-      sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
-  
-      // Wait briefly to allow the purchase to process, then attempt to catch with the pokeball
-      setTimeout(() => {
-        console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
-        sendChatMessage(socket, channelName, "!pokecatch");
-      }, 500);
-    }
-  
-    // Error handling: if we receive a message saying "You don't have any Poké Balls."
-    if (
-      autoPokecatchEnabled &&
-      displayName === "PokemonCommunityGame" &&
-      /You don't have any Poké Balls\./i.test(rawMessage)
-    ) {
-      console.log(`Detected "You don't have any Poké Balls." message in #${channelName}`);
-      console.log(`No pokeball available in #${channelName}. Purchasing 5 pokeballs...`);
       sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
   
       // Wait briefly to allow the purchase to process, then attempt to catch with the pokeball
