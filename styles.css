@@ -259,13 +259,20 @@ button {
   gap: 10px; /* Space between items */
   width: 100%; /* Take up the full width of the container */
   max-width: 100%; /* Ensure it doesn't overflow */
+  box-sizing: border-box;
 }
+
 
 #trackedChannelsList li {
   border: 1px solid grey;
   border-radius: 5px;
   padding: 5px;
   min-width: 100px; /* prevent item from getting to small */
+  max-width: 200px; /* prevent item from getting to large */
+  box-sizing: border-box; /* Add this line */
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* Version label styles */
