@@ -708,53 +708,6 @@ function manageTrackedChannels() {
   }
 }
 
-// Poll Twitch's Get Streams API for tracked channels and open/close chats accordingly
-async function checkLiveStatus() {
-  if (!trackedChannels.length) return;
-  
-  // Build query parameters for each tracked channel
-  const query = trackedChannels
-    .map(channel => `user_login=${encodeURIComponent(channel)}`)
-    .join("&");
-  
-  const response = await fetch(`https://api.twitch.tv/helix/streams?${query}`, {
-    headers: {
-      "Client-ID": clientId,
-      "Authorization": `Bearer ${storedOauthToken || oauthToken}`
-    }
-  });
-  const data = await response.json();
-  
-  // Reset status for all tracked channels to false
-  trackedChannels.forEach(channel => {
-    liveChannelsStatus[channel] = false;
-  });
-  
-  // If a channel is live, mark it as true
-  if (data.data) {
-    data.data.forEach(stream => {
-      const channel = stream.user_login.toLowerCase();
-      liveChannelsStatus[channel] = true;
-    });
-  }
-  // Update the UI to reflect live status
-  updateTrackedChannelsUI();
-  // Open chats for live channels and close for offline channels
-  trackedChannels.forEach(channel => {
-    if (liveChannelsStatus[channel]) {
-      if (!isChatOpen(channel)) {
-        console.log(`Opening chat for ${channel} (live)`);
-        openChat(channel);
-      }
-    } else {
-      if (isChatOpen(channel)) {
-        console.log(`Closing chat for ${channel} (offline)`);
-        closeChat(channel);
-      }
-    }
-  });
-}
-
 // Toggle the visibility of the channel manager UI
 function toggleChannelManager() {
   const manager = document.getElementById("channelManager");
