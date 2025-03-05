@@ -1,17 +1,5 @@
 // --- Global Configuration ---
 const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client ID
-const redirectUri = 'https://deedzorg.github.io/TwitchConnect/callback.html'; // Replace With Your Redirect URI   
-const scopes = ['user:read:email', 'chat:read', 'chat:edit']; // Add scopes as needed
-const chatLimit = 100; // Maximum number of messages to fetch on initial load
-const chatLimitPerRequest = 20; // Maximum number of messages to fetch per request    
-const maxChatMessages = 500; // Maximum number of messages to keep in memory
-const maxChatLines = 100; // Maximum number of lines to keep in the chat window
-const maxChatMessageLength = 500; // Maximum number of characters per message
-const maxChatUsernameLength = 25; // Maximum number of characters for a username
-const maxChatHistory = 1000; // Maximum number of messages to keep in chat history
-const maxChatHistoryLength = 10000; // Maximum number of characters to keep in chat history
-
-
 // --- Global Variables ---        
 let username = null; // This will be set when fetching user data
 let oauthToken = null; // Declare it globally
