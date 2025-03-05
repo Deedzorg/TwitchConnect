@@ -20,6 +20,7 @@ const CATCH_COOLDOWN = 5000;
 let first151Pokemon = [];
  let storedOauthToken = null;
 let lastBallType = null;
+let purchaseIntent  = false;
 
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
@@ -327,54 +328,55 @@ async function fetchChannelPicture(channel) {
 }
 
 async function createChannelElement(channel) {
-    const li = document.createElement("li");
-    li.style.margin = "5px 0";
-    li.style.display = "flex";
-    li.style.flexDirection = "column"; // Stack items vertically
-    li.style.alignItems = "center"; // Center items horizontally
-  
-    // 1. Create the <img> element
-    const img = document.createElement("img");
-    img.style.width = "50px"; // Set a width
-    img.style.height = "50px"; // Set a height
-    img.style.borderRadius = "50%"; // Make it circular
-    img.style.marginBottom = "5px";
-  
-    // 2. Set the src (and handle the async fetch)
-    try {
-        const imgUrl = await fetchChannelPicture(channel);
-        img.src = imgUrl || "default-image.png"; // Fallback to a default if not found
-        img.alt = `Profile picture for ${channel}`; // Add alt text
-        li.appendChild(img);
-    } catch (error) {
-        console.error(`Error fetching/displaying image for ${channel}`, error);
-        img.src = "default-image.png";
-        li.appendChild(img);
-    }
-  
-    // Add the live indicator (if live)
-    if (liveChannelsStatus[channel]) {
-        const liveIndicator = document.createElement("span");
-        liveIndicator.textContent = "● ";
-        liveIndicator.style.color = "red";
-        liveIndicator.style.fontWeight = "bold";
-        li.prepend(liveIndicator); // Add indicator
-    }
-  
-    // Add the channel name
-    const channelText = document.createElement("span");
-    channelText.textContent = channel;
-    li.appendChild(channelText);
-  
-    // Add the remove button
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove";
-    removeBtn.style.marginLeft = "10px";
-    removeBtn.onclick = () => removeTrackedChannel(channel);
-    li.appendChild(removeBtn);
-    
-    return li;
+  const li = document.createElement("li");
+  li.style.margin = "5px 0";
+  li.style.display = "flex";
+  li.style.flexDirection = "column"; // Stack items vertically
+  li.style.alignItems = "center"; // Center items horizontally
+
+  // 1. Create the <img> element
+  const img = document.createElement("img");
+  img.style.width = "50px"; // Set a width
+  img.style.height = "50px"; // Set a height
+  img.style.borderRadius = "50%"; // Make it circular
+  img.style.marginBottom = "5px";
+
+  // 2. Set the src (and handle the async fetch)
+  try {
+      const imgUrl = await fetchChannelPicture(channel);
+      img.src = imgUrl || "default-image.png"; // Fallback to a default if not found
+      img.alt = `Profile picture for ${channel}`; // Add alt text
+      li.appendChild(img);
+  } catch (error) {
+      console.error(`Error fetching/displaying image for ${channel}`, error);
+      img.src = "default-image.png";
+      li.appendChild(img);
   }
+
+  // Add the live indicator (if live)
+  if (liveChannelsStatus[channel]) {
+      const liveIndicator = document.createElement("span");
+      liveIndicator.textContent = "● ";
+      liveIndicator.style.color = "red";
+      liveIndicator.style.fontWeight = "bold";
+      li.prepend(liveIndicator); // Add indicator
+  }
+
+  // Add the channel name
+  const channelText = document.createElement("span");
+  channelText.textContent = channel;
+  li.appendChild(channelText);
+
+  // Add the remove button
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "Remove";
+  removeBtn.style.marginLeft = "10px";
+  removeBtn.onclick = () => removeTrackedChannel(channel);
+  li.appendChild(removeBtn);
+  
+  return li;
+}
+
   
   function updateTrackedChannelsUI() {
     const list = document.getElementById("trackedChannelsList");
@@ -393,7 +395,7 @@ async function createChannelElement(channel) {
     checkLiveStatus()
   }
 
-async function checkLiveStatus() {
+  async function checkLiveStatus() {
     if (!trackedChannels.length) return;
     
     // Build query parameters for each tracked channel
@@ -421,8 +423,7 @@ async function checkLiveStatus() {
         liveChannelsStatus[channel] = true;
       });
     }
-    // Update the UI to reflect live status
-    updateTrackedChannelsUI();
+    
     // Open chats for live channels and close for offline channels
     trackedChannels.forEach(channel => {
       if (liveChannelsStatus[channel]) {
@@ -437,7 +438,11 @@ async function checkLiveStatus() {
         }
       }
     });
+    // Update the UI to reflect live status
+    updateTrackedChannelsUI();
   }
+
+  
 
 function getCombinedEmotesForChannel(channel) {
   // Find the chat box that matches the current channel
