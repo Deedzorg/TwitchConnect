@@ -27,6 +27,7 @@ async function initApp() {
   await fetchGlobalBadges();
   await fetchGlobalEmotes();
   loadTrackedChannels();
+  checkLiveStatus();
   setInterval(checkLiveStatus, 60000);
 }
 
