@@ -292,40 +292,49 @@ function removeTrackedChannel(channel) {
 }
 
 async function fetchChannelPicture(channel) {
-  try{
-  // Return from cache if available
-  if (channelPictures[channel]) {
-
-    return channelPictures[channel];
-  }
-  
-  const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
+  try {
+    // Return from cache if available
+    if (channelPictures[channel]) {
+      return channelPictures[channel];
     }
-  });
-  if (!response.ok) {
-    console.error(`Error fetching user data for ${channel}: ${response.status} - ${response.statusText}`);
-      channelPictures[channel] = null; // clear the cache on error
-    return null; // fallback if not found
-  }
-  const data = await response.json();
-  if (data.data && data.data.length > 0) {
-    const imgUrl = data.data[0].profile_image_url;
-    channelPictures[channel] = imgUrl; // Cache it
-    console.log(`Picture fetched and cached for ${channel}: ${imgUrl}`); // Debugging log
-    return imgUrl;
-  }
-      console.log(`No user data found for ${channel}`); // Debugging log
-      channelPictures[channel] = null; // clear the cache on error
+    //check if we are already trying to get the picture
+      if (channelPictures[`${channel}-loading`]) {
       return null; // fallback if not found
+      }
+      channelPictures[`${channel}-loading`] = true;
+      
+    const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${storedOauthToken || oauthToken}`
+      }
+    });
+    if (!response.ok) {
+      console.error(`Error fetching user data for ${channel}: ${response.status} - ${response.statusText}`);
+        channelPictures[channel] = null; // clear the cache on error
+      delete channelPictures[`${channel}-loading`];
+      return null; // fallback if not found
+    }
+    const data = await response.json();
+    if (data.data && data.data.length > 0) {
+      const imgUrl = data.data[0].profile_image_url;
+      channelPictures[channel] = imgUrl; // Cache it
+      console.log(`Picture fetched and cached for ${channel}: ${imgUrl}`); // Debugging log
+      delete channelPictures[`${channel}-loading`];
+      return imgUrl;
+    }
+        console.log(`No user data found for ${channel}`); // Debugging log
+        channelPictures[channel] = null; // clear the cache on error
+        delete channelPictures[`${channel}-loading`];
+        return null; // fallback if not found
   } catch (error) {
       console.error(`Error fetching user data for ${channel}`, error);
       channelPictures[channel] = null; // clear the cache on error
+      delete channelPictures[`${channel}-loading`];
       return null; // fallback if not found
   }
 }
+
 
 async function createChannelElement(channel) {
     const li = document.createElement("li");
