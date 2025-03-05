@@ -328,54 +328,187 @@ async function fetchChannelPicture(channel) {
 }
 
 async function createChannelElement(channel) {
-  const li = document.createElement("li");
-  li.style.margin = "5px 0";
-  li.style.display = "flex";
-  li.style.flexDirection = "column"; // Stack items vertically
-  li.style.alignItems = "center"; // Center items horizontally
-
-  // 1. Create the <img> element
-  const img = document.createElement("img");
-  img.style.width = "50px"; // Set a width
-  img.style.height = "50px"; // Set a height
-  img.style.borderRadius = "50%"; // Make it circular
-  img.style.marginBottom = "5px";
-
-  // 2. Set the src (and handle the async fetch)
-  try {
-      const imgUrl = await fetchChannelPicture(channel);
-      img.src = imgUrl || "default-image.png"; // Fallback to a default if not found
-      img.alt = `Profile picture for ${channel}`; // Add alt text
-      li.appendChild(img);
-  } catch (error) {
-      console.error(`Error fetching/displaying image for ${channel}`, error);
-      img.src = "default-image.png";
-      li.appendChild(img);
-  }
-
-  // Add the live indicator (if live)
-  if (liveChannelsStatus[channel]) {
-      const liveIndicator = document.createElement("span");
-      liveIndicator.textContent = "● ";
-      liveIndicator.style.color = "red";
-      liveIndicator.style.fontWeight = "bold";
-      li.prepend(liveIndicator); // Add indicator
-  }
-
-  // Add the channel name
-  const channelText = document.createElement("span");
-  channelText.textContent = channel;
-  li.appendChild(channelText);
-
-  // Add the remove button
-  const removeBtn = document.createElement("button");
-  removeBtn.textContent = "Remove";
-  removeBtn.style.marginLeft = "10px";
-  removeBtn.onclick = () => removeTrackedChannel(channel);
-  li.appendChild(removeBtn);
+    const li = document.createElement("li");
+    li.style.margin = "5px 0";
+    li.style.display = "flex";
+    li.style.flexDirection = "column"; // Stack items vertically
+    li.style.alignItems = "center"; // Center items horizontally
   
-  return li;
-}
+    // 1. Create the <img> element
+    const img = document.createElement("img");
+    img.style.width = "50px"; // Set a width
+    img.style.height = "50px"; // Set a height
+    img.style.borderRadius = "50%"; // Make it circular
+    img.style.marginBottom = "5px";
+  
+    // 2. Set the src (and handle the async fetch)
+    try {
+        const imgUrl = await fetchChannelPicture(channel);
+        img.src = imgUrl || "default-image.png"; // Fallback to a default if not found
+        img.alt = `Profile picture for ${channel}`; // Add alt text
+        li.appendChild(img);
+    } catch (error) {
+        console.error(`Error fetching/displaying image for ${channel}`, error);
+        img.src = "default-image.png";
+        li.appendChild(img);
+    }
+  
+    // Add the live indicator (if live)
+    if (liveChannelsStatus[channel]) {
+        const liveIndicator = document.createElement("span");
+        liveIndicator.textContent = "● ";
+        liveIndicator.style.color = "red";
+        liveIndicator.style.fontWeight = "bold";
+        li.prepend(liveIndicator); // Add indicator
+    }
+  
+    // Add the channel name
+    const channelText = document.createElement("span");
+    channelText.textContent = channel;
+    li.appendChild(channelText);
+  
+    // Add the remove button
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove";
+    removeBtn.style.marginLeft = "10px";
+    removeBtn.onclick = () => removeTrackedChannel(channel);
+    li.appendChild(removeBtn);
+    
+    return li;
+  }
+
+async function addChat(providedChannel) {
+    let channel = providedChannel;
+    if (!channel) {
+      channel = prompt("Enter Twitch channel name:");
+      if (!channel) return;
+    }
+    channel = channel.trim();
+    // Strip URLs, keeping only the channel name and convert to lowercase for consistency
+    channel = channel.replace(/.*twitch\.tv\//, "").toLowerCase();
+  
+    // Check if a chat for this channel is already open
+    if (isChatOpen(channel)) {
+      console.log(`Chat for ${channel} is already open.`);
+      return;
+    }
+  
+    const broadcasterId = await getBroadcasterId(channel);
+    if (!broadcasterId) {
+      alert("Channel not found.");
+      return;
+    }
+  
+    // Before appending, mark the chat box with a data attribute for the channel
+    const channelBadges = await fetchChannelBadges(broadcasterId);
+    const channelEmotes = await fetchChannelEmotes(broadcasterId);
+  
+    // Merge global and channel-specific badges/emotes
+    const combinedBadges = { ...globalBadges };
+    Object.keys(channelBadges).forEach(setId => {
+      if (!combinedBadges[setId]) {
+        combinedBadges[setId] = {};
+      }
+      combinedBadges[setId] = { ...combinedBadges[setId], ...channelBadges[setId] };
+    });
+    const combinedEmotes = { ...globalEmotes, ...channelEmotes };
+  
+    // Create chat box UI
+    const chatBox = document.createElement("div");
+    chatBox.className = "chat-box";
+    chatBox.dataset.channel = channel;
+    chatBox.combinedEmotes = combinedEmotes;
+  
+    // Chat header
+    const header = document.createElement("div");
+    header.className = "chat-header";
+    const title = document.createElement("h4");
+    title.textContent = `#${channel}`;
+    header.appendChild(title);
+  
+    const closeButton = document.createElement("button");
+    closeButton.className = "close-btn";
+    closeButton.textContent = "X";
+    closeButton.onclick = () => {
+      closeChat(channel);
+    };
+  
+    header.appendChild(closeButton);
+    chatBox.appendChild(header);
+  
+    // Messages container
+    const messagesDiv = document.createElement("div");
+    messagesDiv.className = "messages";
+    chatBox.appendChild(messagesDiv);
+  
+    // Per-chat input area with emote picker
+    const inputDiv = document.createElement("div");
+    inputDiv.className = "chat-input";
+    const inputField = document.createElement("input");
+    inputField.type = "text";
+    inputField.placeholder = "Type your message...";
+    inputDiv.appendChild(inputField);
+  
+    const emoteBtn = document.createElement("button");
+    emoteBtn.className = "emote-picker-btn";
+    emoteBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <g>
+          <path d="M7 11a1 1 0 100-2 1 1 0 000 2zM14 10a1 1 0 11-2 0 1 1 0 012 0zM10 14a2 2 0 002-2H8a2 2 0 002 2z"></path>
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0a6 6 0 11-12 0 6 6 0 0112 0z" clip-rule="evenodd"></path>
+        </g>
+      </svg>`;
+    // Create per-chat emote picker container
+    const pickerDiv = document.createElement("div");
+    pickerDiv.className = "emote-picker";
+    emoteBtn.onclick = () => toggleEmotePicker({ input: inputField, picker: pickerDiv });
+  
+    // Populate picker if active and not already populated
+    if (pickerDiv.childElementCount === 0) {
+      for (let emote in combinedEmotes) {
+        const img = document.createElement("img");
+        img.style.cursor = "pointer";
+        img.src = combinedEmotes[emote];
+        img.alt = emote;
+        img.title = emote;
+        img.onclick = () => { insertAtCursor(inputField, emote + " "); };
+        pickerDiv.appendChild(img);
+      }
+    }
+    inputDiv.appendChild(emoteBtn);
+    inputDiv.appendChild(pickerDiv);
+  
+    const sendButton = document.createElement("button");
+    sendButton.textContent = "Send";
+    inputDiv.appendChild(sendButton);
+    chatBox.appendChild(inputDiv);
+  
+    // Append chat box to slider container
+    window.chatContainer.appendChild(chatBox);
+  
+    // Connect to Twitch chat
+    const socket = connectToTwitchChat(channel, messagesDiv, combinedBadges, combinedEmotes);
+    chatBox.socket = socket;
+  
+    sendButton.onclick = () => sendChatMessage(socket, channel, inputField);
+    inputField.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") sendChatMessage(socket, channel, inputField);
+    });
+  
+    slideChats(0);
+  }
+  function closeChat(channel) {
+    const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
+    if (chatBox) {
+      if (chatBox.socket && chatBox.socket.readyState === WebSocket.OPEN) {
+        chatBox.socket.close();
+      }
+      chatBox.remove();
+      slideChats(0);
+      console.log(`Closed chat for ${channel}`);
+    } else {
+        console.log(`chatBox for ${channel} not found`);
+    }
+  }
 
   
   function updateTrackedChannelsUI() {
@@ -467,130 +600,6 @@ function insertAtCursor(input, textToInsert) {
   input.focus();
 }
 
-
-async function addChat(providedChannel) {
-  let channel = providedChannel;
-  if (!channel) {
-    channel = prompt("Enter Twitch channel name:");
-    if (!channel) return;
-  } 
-  channel = channel.trim();
-  // Strip URLs, keeping only the channel name and convert to lowercase for consistency
-  channel = channel.replace(/.*twitch\.tv\//, "").toLowerCase();
-
-  // Check if a chat for this channel is already open
-  if (isChatOpen(channel)) {
-    console.log(`Chat for ${channel} is already open.`);
-    return;
-  }
-
-  const broadcasterId = await getBroadcasterId(channel);
-  if (!broadcasterId) {
-    alert("Channel not found.");
-    return;
-  }
-
-  // Before appending, mark the chat box with a data attribute for the channel
-  const channelBadges = await fetchChannelBadges(broadcasterId);
-  const channelEmotes = await fetchChannelEmotes(broadcasterId);
-
-  // Merge global and channel-specific badges/emotes
-  const combinedBadges = { ...globalBadges };
-  Object.keys(channelBadges).forEach(setId => {
-    if (!combinedBadges[setId]) {
-      combinedBadges[setId] = {};
-    }
-    combinedBadges[setId] = { ...combinedBadges[setId], ...channelBadges[setId] };
-  });
-  const combinedEmotes = { ...globalEmotes, ...channelEmotes };
-
-  // Create chat box UI
-  const chatBox = document.createElement("div");
-  chatBox.className = "chat-box";
-  chatBox.dataset.channel = channel;
-  chatBox.combinedEmotes = combinedEmotes;
-
-  // Chat header
-  const header = document.createElement("div");
-  header.className = "chat-header";
-  const title = document.createElement("h4");
-  title.textContent = `#${channel}`;
-  header.appendChild(title);
-
-  const closeButton = document.createElement("button");
-  closeButton.className = "close-btn";
-  closeButton.textContent = "X";
-  closeButton.onclick = () => {
-    if (chatBox.socket && chatBox.socket.readyState === WebSocket.OPEN) {
-      chatBox.socket.close();
-    }
-    chatBox.remove();
-    slideChats(0);
-  };
-  
-  header.appendChild(closeButton);
-  chatBox.appendChild(header);
-
-  // Messages container
-  const messagesDiv = document.createElement("div");
-  messagesDiv.className = "messages";
-  chatBox.appendChild(messagesDiv);
-
-  // Per-chat input area with emote picker
-  const inputDiv = document.createElement("div");
-  inputDiv.className = "chat-input";
-  const inputField = document.createElement("input");
-  inputField.type = "text";
-  inputField.placeholder = "Type your message...";
-  inputDiv.appendChild(inputField);
-
-  const emoteBtn = document.createElement("button");
-  emoteBtn.className = "emote-picker-btn";
-  emoteBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <g>
-        <path d="M7 11a1 1 0 100-2 1 1 0 000 2zM14 10a1 1 0 11-2 0 1 1 0 012 0zM10 14a2 2 0 002-2H8a2 2 0 002 2z"></path>
-        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0a6 6 0 11-12 0 6 6 0 0112 0z" clip-rule="evenodd"></path>
-      </g>
-    </svg>`;
-  // Create per-chat emote picker container
-  const pickerDiv = document.createElement("div");
-  pickerDiv.className = "emote-picker";
-  emoteBtn.onclick = () => toggleEmotePicker({ input: inputField, picker: pickerDiv });
-  
-  // Populate picker if active and not already populated
-  if (pickerDiv.childElementCount === 0) {
-    for (let emote in combinedEmotes) {
-      const img = document.createElement("img");
-      img.style.cursor = "pointer";
-      img.src = combinedEmotes[emote];
-      img.alt = emote;
-      img.title = emote;
-      img.onclick = () => { insertAtCursor(inputField, emote + " "); };
-      pickerDiv.appendChild(img);
-    }
-  }
-  inputDiv.appendChild(emoteBtn);
-  inputDiv.appendChild(pickerDiv);
-
-  const sendButton = document.createElement("button");
-  sendButton.textContent = "Send";
-  inputDiv.appendChild(sendButton);
-  chatBox.appendChild(inputDiv);
-
-  // Append chat box to slider container
-  window.chatContainer.appendChild(chatBox);
-
-  // Connect to Twitch chat
-  const socket = connectToTwitchChat(channel, messagesDiv, combinedBadges, combinedEmotes);
-  chatBox.socket = socket;
-
-  sendButton.onclick = () => sendChatMessage(socket, channel, inputField);
-  inputField.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") sendChatMessage(socket, channel, inputField);
-  });
-
-  slideChats(0);
-}
 
 
 function sendChatMessage(socket, channel, inputField) {
@@ -684,18 +693,7 @@ function isChatOpen(channel) {
 async function openChat(channel) {
   await addChat(channel);
 }
-// Closes the chat for the given channel, if open
-function closeChat(channel) {
-  const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
-  if (chatBox) {
-    if (chatBox.socket && chatBox.socket.readyState === WebSocket.OPEN) {
-      chatBox.socket.close();
-    }
-    chatBox.remove();
-    slideChats(0);
-    console.log(`Closed chat for ${channel}`);
-  }
-}
+
 // Lets the user modify the tracked channels list via a prompt
 function manageTrackedChannels() {
   // Prompt user for comma-separated channels
