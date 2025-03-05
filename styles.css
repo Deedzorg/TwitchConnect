@@ -268,3 +268,12 @@ button {
   min-width: 100px; /* prevent item from getting to small */
 }
 
+/* Version label styles */
+.version-label {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8em;
+  color: #777; /* muted color */
+}
