@@ -1,10 +1,23 @@
 // --- Global Configuration ---
-const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46';
+const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client ID
+const redirectUri = 'https://deedzorg.github.io/TwitchConnect/callback.html'; // Replace With Your Redirect URI   
+const scopes = ['user:read:email', 'chat:read', 'chat:edit']; // Add scopes as needed
+const chatLimit = 100; // Maximum number of messages to fetch on initial load
+const chatLimitPerRequest = 20; // Maximum number of messages to fetch per request    
+const maxChatMessages = 500; // Maximum number of messages to keep in memory
+const maxChatLines = 100; // Maximum number of lines to keep in the chat window
+const maxChatMessageLength = 500; // Maximum number of characters per message
+const maxChatUsernameLength = 25; // Maximum number of characters for a username
+const maxChatHistory = 1000; // Maximum number of messages to keep in chat history
+const maxChatHistoryLength = 10000; // Maximum number of characters to keep in chat history
+
+
+// --- Global Variables ---        
 let username = null; // This will be set when fetching user data
 let oauthToken = null; // Declare it globally
 
 
-// Global variables to store badges and emotes
+// Global variables to store badges and emotes  
 let globalBadges = {};
 let globalEmotes = {};
 
@@ -389,6 +402,7 @@ async function createChannelElement(channel) {
             console.error("Error updating tracked channels:", error);
         });
     saveTrackedChannels()
+    checkLiveStatus()
   }
 
 async function checkLiveStatus() {
@@ -828,7 +842,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         lastCatchTime = Date.now();
       }
     }
-  
+    
     // Error handling: if we receive a message saying "You don't own that ball."
     if (
       autoPokecatchEnabled &&
@@ -839,13 +853,23 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
       console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
       sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
-  
-      // Wait briefly to allow the purchase to process, then attempt to catch with the pokeball
-      setTimeout(() => {
-        console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
-        sendChatMessage(socket, channelName, "!pokecatch");
-      }, 500);
+      purchaseIntent = true;
     }
+
+    // Only check for the "purchase successful" if purchaseIntent is true
+    if (
+      purchaseIntent &&
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      rawMessage.toLowerCase().includes(`@${username.toLowerCase()} purchase successful!`)
+    ) {
+      console.log(`Purchase successful message received for @${username} in #${channelName}`);
+      console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
+      sendChatMessage(socket, channelName, "!pokecatch");
+      // Reset the flag after handling the purchase
+      purchaseIntent = false;
+    }
+
   }
   
   function sendChatMessage(socket, channelName, message) {
