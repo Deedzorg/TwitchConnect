@@ -805,7 +805,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
       console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
       setTimeout(() => {
-        sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
+        sendChatMessage(socket, channelName, "!pokeshop pokeball 1");
       }, 2500);
       purchaseIntent = true;
     }
@@ -815,7 +815,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       purchaseIntent &&
       autoPokecatchEnabled &&
       displayName === "PokemonCommunityGame" &&
-      rawMessage.toLowerCase().includes(`@${username.toLowerCase()} Purchase successful!`)
+      /@.+? purchase successful!/i.test(rawMessage)
     ) {
       console.log(`Purchase successful message received for @${username} in #${channelName}`);
       console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
@@ -825,7 +825,6 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       // Reset the flag after handling the purchase
       purchaseIntent = false;
     }
-
   }
   
   function sendChatMessage(socket, channelName, message) {
