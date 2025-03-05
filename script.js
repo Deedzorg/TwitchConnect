@@ -806,11 +806,13 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       purchaseIntent &&
       autoPokecatchEnabled &&
       displayName === "PokemonCommunityGame" &&
-      rawMessage.toLowerCase().includes(`@${username.toLowerCase()} purchase successful!`)
+      rawMessage.toLowerCase().includes(`@${username.toLowerCase()} Purchase successful!`)
     ) {
       console.log(`Purchase successful message received for @${username} in #${channelName}`);
       console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
-      sendChatMessage(socket, channelName, "!pokecatch");
+      setTimeout(() => {
+        sendChatMessage(socket, channelName, "!pokecatch");
+      }, 2500);
       // Reset the flag after handling the purchase
       purchaseIntent = false;
     }

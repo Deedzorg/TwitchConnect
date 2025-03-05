@@ -275,6 +275,18 @@ button {
   white-space: nowrap;
 }
 
+#channelManager {
+  display: none;
+  border: 1px solid #444;
+  padding: 10px;
+  margin: 10px auto;
+  width: 90%; /* Use a percentage to be responsive */
+  max-width: 900px; /*optional you can keep a max width*/
+  background: #222;
+  color: #fff;
+  box-sizing: border-box; /* Add this line */
+}
+
 /* Version label styles */
 .version-label {
   position: fixed;
