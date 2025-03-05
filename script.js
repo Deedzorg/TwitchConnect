@@ -27,7 +27,6 @@ async function initApp() {
   await fetchGlobalBadges();
   await fetchGlobalEmotes();
   loadTrackedChannels();
-  checkLiveStatus();
   setInterval(checkLiveStatus, 60000);
 }
 
@@ -525,7 +524,6 @@ async function addChat(providedChannel) {
             console.error("Error updating tracked channels:", error);
         });
     saveTrackedChannels()
-    checkLiveStatus()
   }
 
   async function checkLiveStatus() {
