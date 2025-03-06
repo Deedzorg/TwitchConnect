@@ -805,7 +805,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
       console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
       setTimeout(() => {
-        sendChatMessage(socket, channelName, "!pokeshop pokeball 1");
+        sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
       }, 2500);
       purchaseIntent = true;
     }

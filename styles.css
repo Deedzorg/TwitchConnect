@@ -296,3 +296,78 @@ button {
   font-size: 0.8em;
   color: #777; /* muted color */
 }
+
+
+/* --- Mobile-Specific Styles --- */
+@media (max-width: 768px) {
+  /* Apply these styles for screens 768px wide or less (typical tablets and phones) */
+  body {
+    padding: 10px; /* Reduce padding on smaller screens */
+  }
+
+  .chat-slider {
+    padding: 0 20px; /* Reduce padding on mobile */
+  }
+
+  .chat-box {
+    width: 100%; /* Take up full width on mobile */
+    margin: 10px 0; /* Top and bottom margin instead of side margins */
+  }
+
+  .slider-btn {
+    top: 5px; /* Adjust position */
+  }
+
+  #prevBtn {
+    left: 5px; /* Adjust position */
+  }
+
+  #nextBtn {
+    right: 5px; /* Adjust position */
+  }
+
+  .global-chat-input {
+    margin-top: 30px;
+    flex-direction: column; /* Stack input and button vertically */
+  }
+
+  .global-chat-input input {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 5px;
+  }
+
+  .emote-picker {
+    max-width: 100%; /* Emote picker takes full width on mobile */
+    bottom: 30px;
+  }
+
+  #trackedChannelsList {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Allow smaller items */
+  }
+
+  #trackedChannelsList li {
+    min-width: 80px;
+    max-width: 100%;
+  }
+  #channelManager {
+    width: 95%;
+  }
+}
+
+/* --- Very Small Mobile Screens --- */
+@media (max-width: 480px) {
+  .chat-header h4 {
+    font-size: 16px; /* Slightly smaller header font */
+  }
+
+  .close-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+
+  .emote-picker img {
+    width: 30px; /* Make emotes a bit smaller */
+  }
+}
