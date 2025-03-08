@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound Clip Player</title>
+  <link rel="stylesheet" href="soundclipper.css">
+</head>
+<body>
+  <header>
+    <h1>Sound Clip Player</h1>
+    <!-- New export/import buttons -->
+    <button id="exportButton">Export Board</button>
+    <button id="importButton">Import Board</button>
+    <!-- Hidden file input for board import -->
+    <input type="file" id="boardFileInput" accept=".json" style="display: none;">
+    <br>
+    <button id="infoButton">Info</button>
+    <br>
+    <input type="file" id="fileInput" accept="audio/*" multiple>
+    <br>
+    <input type="text" id="clipName" placeholder="Enter clip name">
+    <button id="recordButton" class="record-button">Start Recording</button>
+  </header>
+
+  <!-- Container for clip buttons and toolbar -->
+  <div class="container" id="buttonsContainer">
+    <!-- Toolbar inside the container -->
+    <div id="toolbar">
+      <div id="deleteZone" class="toolbar-section">Delete Clip</div>
+      <div id="saveZone" class="toolbar-section">Save Clip</div>
+    </div>
+  </div>
+
+  <!-- Modal for info -->
+  <div id="infoModal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <h2>Play Mode Instructions</h2>
+      <ul style="list-style: none; padding:0; text-align: left;">
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#00ff00;">Green – Loop:</strong> Toggle play/pause with looping enabled.
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#0000ff;">Blue – Play Once:</strong> Always plays the clip from the beginning.
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#ff0000;">Red – Record Over:</strong> Click to start re-recording. Click again to stop recording immediately. Button turns green when done.
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#ffff00;">Yellow – Hold to Play:</strong> Press and hold to play; release to pause (resumes from same spot).
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#800080;">Purple – Toggle Resume:</strong> Click to toggle play/pause without resetting current time.
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#ffa500;">Orange – High Pitch/Fast:</strong> Sets playback rate to 1.5 for a higher, faster sound.
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong style="color:#008080;">Teal – Low Pitch/Slow:</strong> Sets playback rate to 0.75 for a lower, slower sound.
+        </li>
+      </ul>
+      <p style="font-size:14px;">Hold <strong>Shift</strong> while dragging a clip to reposition it. You can also click a clip to select it (white border). Then click the Delete or Save zones to act on the selected clip.</p>
+    </div>
+  </div>
+
+  <script>
+    // Global variable to store the currently selected clip button.
+    let selectedClipButton = null;
+
+    // Define play modes:
+    // 0: Loop (Green), 1: Play Once (Blue), 2: Record Over (Red),
+    // 3: Hold to Play (Yellow), 4: Toggle Resume (Purple),
+    // 5: High Pitch/Fast (Orange), 6: Low Pitch/Slow (Teal)
+    const playModes = [
+      { color: '#00ff00', label: 'Loop', description: 'Continuously loops the clip.' },
+      { color: '#0000ff', label: 'Play Once', description: 'Plays from the beginning and resets after each click.' },
+      { color: '#ff0000', label: 'Record Over', description: 'Click to record over; click again to stop early. Button turns green when done.' },
+      { color: '#ffff00', label: 'Hold to Play', description: 'Press and hold to play; release to pause (resumes later).' },
+      { color: '#800080', label: 'Toggle Resume', description: 'Toggles play/pause without resetting current time.' },
+      { color: '#ffa500', label: 'High Pitch/Fast', description: 'Sets playback rate to 1.5 for a higher, faster sound.' },
+      { color: '#008080', label: 'Low Pitch/Slow', description: 'Sets playback rate to 0.75 for a lower, slower sound.' }
+    ];
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let clipCounter = {};
+    // savedClips now includes mode along with position.
+    let savedClips = JSON.parse(localStorage.getItem('savedClips')) || [];
+
+    // Info Modal functions.
+    const infoModal = document.getElementById('infoModal');
+    document.getElementById('infoButton').addEventListener('click', () => {
+      infoModal.style.display = 'block';
+    });
+    document.getElementById('closeModal').addEventListener('click', () => {
+      infoModal.style.display = 'none';
+    });
+    window.onclick = function(event) {
+      if (event.target == infoModal) {
+        infoModal.style.display = 'none';
+      }
+    };
+
+    // Recording function for new clips.
+    function startRecording(button) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = () => {
+              let name = document.getElementById('clipName').value || 'Recorded Clip';
+              if (clipCounter[name] === undefined) {
+                clipCounter[name] = 1;
+              } else {
+                clipCounter[name]++;
+                name += ` (${clipCounter[name]})`;
+              }
+              // Save with default mode 0.
+              saveClip(name, reader.result, null, 0);
+              addAudioButton(reader.result, name, null, 0);
+            };
+          };
+          mediaRecorder.start();
+          button.textContent = 'Stop Recording';
+          button.classList.add('recording');
+        });
+    }
+
+    document.getElementById('recordButton').addEventListener('click', function() {
+      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        startRecording(this);
+      } else {
+        mediaRecorder.stop();
+        this.textContent = 'Start Recording';
+        this.classList.remove('recording');
+      }
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      Array.from(event.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          // Save with default mode 0.
+          saveClip(file.name, reader.result, null, 0);
+          addAudioButton(reader.result, file.name, null, 0);
+        };
+      });
+    });
+
+    // Export board state to a JSON file.
+    document.getElementById('exportButton').addEventListener('click', () => {
+      const boardState = JSON.stringify(savedClips);
+      const blob = new Blob([boardState], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'board_state.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // Import board state from a JSON file.
+    document.getElementById('importButton').addEventListener('click', () => {
+      document.getElementById('boardFileInput').click();
+    });
+    document.getElementById('boardFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedClips = JSON.parse(event.target.result);
+          savedClips = importedClips;
+          localStorage.setItem('savedClips', JSON.stringify(savedClips));
+          // Clear existing board buttons (retain toolbar).
+          document.getElementById('buttonsContainer').innerHTML = document.getElementById('toolbar').outerHTML;
+          loadClips();
+        } catch (err) {
+          alert('Error loading board file. Please make sure it is valid.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function saveClip(name, data, pos, mode = 0) {
+      const clip = { name, data, mode };
+      if (pos) {
+        clip.pos = pos;
+      }
+      savedClips.push(clip);
+      localStorage.setItem('savedClips', JSON.stringify(savedClips));
+    }
+
+    function updateClipInStorage(name, data) {
+      savedClips = savedClips.map(clip => clip.name === name ? { ...clip, data } : clip);
+      localStorage.setItem('savedClips', JSON.stringify(savedClips));
+    }
+
+    function updateClipPosition(name, pos) {
+      savedClips = savedClips.map(clip => clip.name === name ? { ...clip, pos } : clip);
+      localStorage.setItem('savedClips', JSON.stringify(savedClips));
+    }
+
+    function updateClipMode(name, mode) {
+      savedClips = savedClips.map(clip => clip.name === name ? { ...clip, mode } : clip);
+      localStorage.setItem('savedClips', JSON.stringify(savedClips));
+    }
+
+    function deleteClip(name, buttonElement) {
+      if (confirm(`Are you sure you want to delete "${name}"?`)) {
+        savedClips = savedClips.filter(clip => clip.name !== name);
+        localStorage.setItem('savedClips', JSON.stringify(savedClips));
+        if (buttonElement && buttonElement.parentNode) {
+          buttonElement.parentNode.removeChild(buttonElement);
+        }
+        // If the deleted clip was selected, clear selection.
+        if (selectedClipButton === buttonElement) {
+          selectedClipButton = null;
+        }
+      }
+    }
+
+    function triggerDownload(name, dataURL) {
+      const a = document.createElement('a');
+      a.href = dataURL;
+      a.download = name + '.wav';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Add click listeners to the toolbar zones for selected clip actions.
+    document.getElementById('deleteZone').addEventListener('click', () => {
+      if (selectedClipButton) {
+        deleteClip(selectedClipButton.dataset.clipName, selectedClipButton);
+        selectedClipButton = null;
+      } else {
+        alert("No clip selected.");
+      }
+    });
+    document.getElementById('saveZone').addEventListener('click', () => {
+      if (selectedClipButton) {
+        triggerDownload(selectedClipButton.dataset.clipName, selectedClipButton.dataset.dataURL);
+      } else {
+        alert("No clip selected.");
+      }
+    });
+
+    function loadClips() {
+      savedClips.forEach(clip => {
+        addAudioButton(clip.data, clip.name, clip.pos, clip.mode || 0);
+      });
+    }
+
+    function addAudioButton(dataURL, name, pos, savedMode = 0) {
+      const container = document.getElementById('buttonsContainer');
+      const audio = new Audio(dataURL);
+      let modeIndex = savedMode;
+      audio.loop = (modeIndex === 0);
+      audio.playbackRate = 1.0;
+      if (modeIndex === 5) {
+        audio.playbackRate = 1.5;
+      } else if (modeIndex === 6) {
+        audio.playbackRate = 0.75;
+      }
+      
+      const button = document.createElement('button');
+      button.className = 'sound-button';
+      button.textContent = name;
+      button.style.backgroundColor = playModes[modeIndex].color;
+      
+      // Store clip name and dataURL on the button's dataset.
+      button.dataset.clipName = name;
+      button.dataset.dataURL = dataURL;
+      
+      if (pos && pos.left !== undefined && pos.top !== undefined) {
+        button.style.position = 'absolute';
+        button.style.left = pos.left + 'px';
+        button.style.top = pos.top + 'px';
+      }
+      
+      let tempRecorder = null;
+      let tempChunks = [];
+      
+      // Animation functions for playing indicator.
+      function startPlayingAnimation() {
+        let hue = 0;
+        button.playingAnim = setInterval(() => {
+          hue = (hue + 5) % 360;
+          button.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+        }, 100);
+      }
+      
+      function stopPlayingAnimation() {
+        if (button.playingAnim) {
+          clearInterval(button.playingAnim);
+          button.playingAnim = null;
+          button.style.backgroundColor = playModes[modeIndex].color;
+        }
+      }
+      
+      audio.addEventListener('play', startPlayingAnimation);
+      audio.addEventListener('pause', stopPlayingAnimation);
+      audio.addEventListener('ended', stopPlayingAnimation);
+      
+      // When the button is clicked, mark it as the selected clip.
+      button.addEventListener('click', function(e) {
+        if (e.shiftKey) return;
+        // Update selected clip border.
+        if (selectedClipButton) {
+          selectedClipButton.style.border = '';
+        }
+        selectedClipButton = button;
+        button.style.border = '2px solid white';
+        
+        // Then process playback actions.
+        if (modeIndex === 2) {
+          if (button.dataset.recording === 'true') {
+            if (tempRecorder) {
+              tempRecorder.stop();
+              button.dataset.recording = 'false';
+              button.style.backgroundColor = playModes[0].color;
+              button.textContent = name;
+            }
+            return;
+          } else {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+              .then(stream => {
+                tempRecorder = new MediaRecorder(stream);
+                tempChunks = [];
+                tempRecorder.ondataavailable = e => tempChunks.push(e.data);
+                tempRecorder.onstop = () => {
+                  const newBlob = new Blob(tempChunks, { type: 'audio/wav' });
+                  const reader = new FileReader();
+                  reader.readAsDataURL(newBlob);
+                  reader.onloadend = () => {
+                    audio.src = reader.result;
+                    updateClipInStorage(name, reader.result);
+                    modeIndex = 0;
+                    updateClipMode(name, modeIndex);
+                    button.style.backgroundColor = playModes[modeIndex].color;
+                    audio.loop = true;
+                  };
+                };
+                tempRecorder.start();
+                button.dataset.recording = 'true';
+                button.textContent = name + ' (Recording...)';
+              });
+            return;
+          }
+        }
+        if (modeIndex === 1) {
+          audio.currentTime = 0;
+          audio.play();
+          return;
+        }
+        if (modeIndex === 4) {
+          if (audio.paused) {
+            audio.play();
+          } else {
+            audio.pause();
+          }
+          return;
+        }
+        if (modeIndex === 5) {
+          audio.playbackRate = 1.5;
+          audio.currentTime = 0;
+          audio.play();
+          return;
+        }
+        if (modeIndex === 6) {
+          audio.playbackRate = 0.75;
+          audio.currentTime = 0;
+          audio.play();
+          return;
+        }
+        if (modeIndex === 0) {
+          if (audio.paused) {
+            audio.loop = true;
+            audio.play();
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+        }
+      });
+      
+      // Hold-to-play mode.
+      button.addEventListener('mousedown', function(e) {
+        if (e.shiftKey) return;
+        if (modeIndex === 3) {
+          audio.play();
+        }
+      });
+      button.addEventListener('mouseup', function(e) {
+        if (e.shiftKey) return;
+        if (modeIndex === 3) {
+          audio.pause();
+        }
+      });
+      
+      // Right-click cycles play modes.
+      button.addEventListener('contextmenu', function(event) {
+        event.preventDefault();
+        modeIndex = (modeIndex + 1) % playModes.length;
+        button.style.backgroundColor = playModes[modeIndex].color;
+        audio.loop = false;
+        audio.playbackRate = 1.0;
+        if (modeIndex === 0) {
+          audio.loop = true;
+        } else if (modeIndex === 5) {
+          audio.playbackRate = 1.5;
+        } else if (modeIndex === 6) {
+          audio.playbackRate = 0.75;
+        }
+        updateClipMode(name, modeIndex);
+      });
+      
+      // Drag-and-drop functionality: hold Shift and drag.
+      button.addEventListener('mousedown', function(e) {
+        if (!e.shiftKey) return;
+        e.preventDefault();
+        let rect = button.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
+        button.style.position = 'absolute';
+        const containerRect = container.getBoundingClientRect();
+        button.style.left = (rect.left - containerRect.left) + 'px';
+        button.style.top = (rect.top - containerRect.top) + 'px';
+        
+        function onMouseMove(e2) {
+          let newLeft = e2.clientX - containerRect.left - offsetX;
+          let newTop = e2.clientY - containerRect.top - offsetY;
+          newLeft = Math.max(0, Math.min(newLeft, containerRect.width - rect.width));
+          newTop = Math.max(0, Math.min(newTop, containerRect.height - rect.height));
+          button.style.left = newLeft + 'px';
+          button.style.top = newTop + 'px';
+        }
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', function onMouseUp() {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          
+          // Check if the clip button was dropped into a toolbar zone.
+          const deleteZone = document.getElementById('deleteZone').getBoundingClientRect();
+          const saveZone = document.getElementById('saveZone').getBoundingClientRect();
+          const buttonRect = button.getBoundingClientRect();
+          const centerX = buttonRect.left + buttonRect.width / 2;
+          const centerY = buttonRect.top + buttonRect.height / 2;
+          
+          if (centerX >= deleteZone.left && centerX <= deleteZone.right &&
+              centerY >= deleteZone.top && centerY <= deleteZone.bottom) {
+            deleteClip(name, button);
+            return;
+          }
+          if (centerX >= saveZone.left && centerX <= saveZone.right &&
+              centerY >= saveZone.top && centerY <= saveZone.bottom) {
+            triggerDownload(name, dataURL);
+          }
+          const left = parseInt(button.style.left);
+          const top = parseInt(button.style.top);
+          updateClipPosition(name, { left, top });
+        });
+      });
+      
+      container.appendChild(button);
+    }
+
+    window.onload = loadClips;
+  </script>
+</body>
+</html>
