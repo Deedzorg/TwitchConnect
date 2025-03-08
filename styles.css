@@ -297,11 +297,6 @@ button {
   color: #777; /* muted color */
 }
 
-#togglePokecatch {
-  display: none;
-}
-
-
 /* --- Mobile-Specific Styles --- */
 @media (max-width: 768px) {
   /* Apply these styles for screens 768px wide or less (typical tablets and phones) */
