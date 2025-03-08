@@ -166,7 +166,7 @@ button {
 /* --- Slider Buttons --- */
 .slider-btn {
   position: absolute;
-  top: 10px;  /* Place buttons in the top corners within reserved padding */
+  top: 30px;  /* Place buttons in the top corners within reserved padding */
   background: rgba(0,0,0,0.5);
   border: none;
   color: #fff;

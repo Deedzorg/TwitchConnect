@@ -632,7 +632,7 @@ function displaySentMessage(channel, message) {
   
   // Create a span for the message text
   const messageText = document.createElement("span");
-  messageText.textContent = `[${timestamp}] You: ${message}`;
+  messageText.textContent = `[${timestamp}] ${username}: ${message}`;
   messageElem.appendChild(messageText);
   
   chatWindow.appendChild(messageElem);
@@ -788,6 +788,9 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   
         console.log(`Attempting to catch ${pokemonName} with pokeball in #${channelName}`);
         sendChatMessage(socket, channelName, "!pokecatch");
+        setTimeout(() => {
+          sendChatMessage(socket, channelName, "!pokecatch");
+        }, 2500);
   
         // Set last ball type to pokeball since that's all we're using now.
         lastBallType = "pokeball";
