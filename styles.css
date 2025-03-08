@@ -297,6 +297,10 @@ button {
   color: #777; /* muted color */
 }
 
+#togglePokecatch {
+  display: none;
+}
+
 
 /* --- Mobile-Specific Styles --- */
 @media (max-width: 768px) {
@@ -353,10 +357,8 @@ button {
   #channelManager {
     width: 95%;
   }
-  
-  #togglePokecatch {
-    display: none;
-  }
+
+
 }
 
 /* --- Very Small Mobile Screens --- */
