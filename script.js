@@ -14,7 +14,7 @@ let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
 let channelPictures = {};
 let currentSlide = 0;
 
-let autoPokecatchEnabled = false;
+//let autoPokecatchEnabled = false;
 let lastCatchTime = 0;
 const CATCH_COOLDOWN = 5000;
 let first151Pokemon = [];
@@ -30,12 +30,13 @@ async function initApp() {
   checkLiveStatus();
   setInterval(checkLiveStatus, 60000);
 }
-
+/*
 document.getElementById("togglePokecatch").addEventListener("click", function() {
   autoPokecatchEnabled = !autoPokecatchEnabled;
   this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
   console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
-});
+}); 
+*/
 
 document.addEventListener("DOMContentLoaded", () => {
   // Define chatContainer globally
@@ -913,7 +914,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         socket.send(`PRIVMSG #${channelName} :honk\r\n`);
       }
     }
-      handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName)
+    /* handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName)*/
   };
   
   socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
