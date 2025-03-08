@@ -36,8 +36,6 @@ document.getElementById("togglePokecatch").addEventListener("click", function() 
   autoPokecatchEnabled = !autoPokecatchEnabled;
   this.textContent = autoPokecatchEnabled ? "Disable Auto-Pokecatch" : "Enable Auto-Pokecatch";
   console.log("Auto-Pokecatch enabled:", autoPokecatchEnabled);
-
-
 });
 */
 
