@@ -353,6 +353,10 @@ button {
   #channelManager {
     width: 95%;
   }
+  
+  #togglePokecatch {
+    display: none;
+  }
 }
 
 /* --- Very Small Mobile Screens --- */
