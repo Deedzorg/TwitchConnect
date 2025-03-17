@@ -832,6 +832,14 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     // Only check for the "purchase successful" if purchaseIntent is true
   }
   
+  function addParticipant(username) {
+    if (!participants.includes(username)) {
+        participants.push(username);
+        leaderboard[username] = 0; // Initialize score
+        console.log(`${username} joined the game!`);
+    }
+  }
+
   function sendChatMessage(socket, channelName, message) {
     socket.send(`PRIVMSG #${channelName} :${message}\r\n`);
   }
