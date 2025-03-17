@@ -1,5 +1,5 @@
 const clientId = "1cvmce5wrxeuk4hpfgd4ssfthiwx46";
-let oauthToken = localStorage.getItem("twitchAccessToken");
+const token = localStorage.getItem("twitchAccessToken");
 
 let globalBadges = {};
 let globalEmotes = {};
