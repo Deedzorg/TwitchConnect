@@ -2,9 +2,15 @@
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("Main script loaded.");
 
-    await checkTokenValidity(); // Ensure OAuth is valid
-    await initApp(); // Initialize the app
+    try {
+        await checkTokenValidity(); // Ensure OAuth is valid
+        await initApp(); // Initialize the app
 
-    // Auto-reopen chats on reload
-    trackedChannels.forEach(channel => openChat(channel));
+        // Auto-reopen chats on reload
+        trackedChannels.forEach(channel => openChat(channel));
+
+        console.log("Initialization complete.");
+    } catch (error) {
+        console.error("Error during initialization:", error);
+    }
 });
