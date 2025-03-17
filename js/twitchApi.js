@@ -18,9 +18,6 @@ async function initApp() {
     setInterval(checkLiveStatus, 60000); // Update live status every minute
 }
 
-// Ensure `initApp()` is globally accessible
-window.initApp = initApp;
-
 /**
  * Fetches global Twitch badges
  */
