@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trivia Game</title>
+  <link rel="stylesheet" href="game.css" />
+</head>
+<body>
+  <div id="game-container">
+    <h1>Trivia Game</h1>
+    <!-- This section shows the question and answer options -->
+    <div id="question-section">
+      <div id="question-text">Question will appear here...</div>
+      <div id="options">
+        <button class="option-btn" data-option="1">Option 1</button>
+        <button class="option-btn" data-option="2">Option 2</button>
+        <button class="option-btn" data-option="3">Option 3</button>
+        <button class="option-btn" data-option="4">Option 4</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard area -->
+    <div id="score-section">
+      <h2>Leaderboard</h2>
+      <ul id="leaderboard"></ul>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="game.js"></script>
+
+</body>
+</html>
