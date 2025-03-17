@@ -8,6 +8,19 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentQuestion = {};
     let questionCount = 0;
 
+    // Retrieve user name from sessionStorage
+    const userName = sessionStorage.getItem('userName');
+    if (userName) {
+        // Add user to the participants list if they are not already in
+        if (!window.participants.includes(userName)) {
+            window.participants.push(userName);
+            window.leaderboard[userName] = 0;
+            console.log(`${userName} has joined the game!`);
+        }
+    } else {
+        console.log("No user name found in sessionStorage. Make sure user is logged in.");
+    }
+
     // Listen for players joining
     window.addEventListener("PlayerJoined", (event) => {
         const username = event.detail.username;
@@ -78,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
         leaderboardEl.innerHTML = "";
 
         Object.entries(window.leaderboard)
-            .sort((a, b) => b[1] - a[1])
+            .sort((a, b) => b[1] - a[1])  // Sort by score
             .forEach(([user, score]) => {
                 const li = document.createElement("li");
                 li.textContent = `${user}: ${score}`;
@@ -96,7 +109,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Start the game
+    // Start the game by loading the first question
     loadNewQuestion();
 });
-

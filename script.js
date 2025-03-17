@@ -872,6 +872,24 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     }
 });
 
+function handleChatMessage(channel, user, message, self) {
+  if (self) return; // Ignore bot's own messages
+
+  const username = user["display-name"];
+  const command = message.trim().toLowerCase();
+
+  // Player wants to join
+  if (command === "!playgame") {
+      console.log(`${username} wants to play!`);
+      window.dispatchEvent(new CustomEvent("PlayerJoined", { detail: { username } }));
+  }
+
+  // Check if the message is an answer (A, B, C, or D)
+  if (["a", "b", "c", "d"].includes(command)) {
+      console.log(`${username} answered: ${command.toUpperCase()}`);
+      window.dispatchEvent(new CustomEvent("PlayerAnswered", { detail: { username, answer: command.toUpperCase() } }));
+  }
+}
 // Function to add a participant and save to localStorage
 function addParticipant(username) {
     if (!window.participants.includes(username)) {
