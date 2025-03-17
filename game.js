@@ -8,61 +8,32 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentQuestion = {};
     let questionCount = 0;
 
-    // Connect to Twitch chat
-    const twitchChannel = "your_channel_name";  // 🔹 Replace with your Twitch channel
-    const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    // Listen for players joining
+    window.addEventListener("PlayerJoined", (event) => {
+        const username = event.detail.username;
 
-    socket.onopen = () => {
-        console.log("✅ Connected to Twitch chat!");
-        socket.send("CAP REQ :twitch.tv/tags twitch.tv/commands");
-        socket.send(`PASS oauth:your_oauth_token`);  // 🔹 Replace with your OAuth token
-        socket.send("NICK justinfan123"); // Anonymous login
-        socket.send(`JOIN #${twitchChannel}`);
-    };
-
-    socket.onmessage = (event) => {
-        const message = event.data;
-        console.log("📩 Twitch Chat Message:", message);
-
-        if (message.includes("PRIVMSG")) {
-            const parsed = parseTwitchMessage(message);
-            const username = parsed.username;
-            const chatMessage = parsed.message;
-
-            // Check for !play command
-            if (chatMessage.toLowerCase().trim() === "!play") {
-                addParticipant(username);
-                return;
-            }
-
-            // Check for answers like "!answer 2"
-            if (chatMessage.toLowerCase().startsWith("!answer")) {
-                const answer = chatMessage.split(" ")[1]; // Get the number
-                handleTwitchAnswer(username, answer);
-            }
-        }
-    };
-
-    function parseTwitchMessage(message) {
-        const regex = /:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)/;
-        const match = message.match(regex);
-        return match ? { username: match[1], message: match[2].trim() } : null;
-    }
-
-    function addParticipant(username) {
         if (!window.participants.includes(username)) {
             window.participants.push(username);
             window.leaderboard[username] = 0;
-            console.log(`${username} joined the game!`);
+            console.log(`${username} has joined the game!`);
+        } else {
+            console.log(`${username} is already in the game.`);
         }
-    }
+    });
 
-    function handleTwitchAnswer(username, answer) {
-        if (!window.participants.includes(username)) return;
+    // Listen for player answers
+    window.addEventListener("PlayerAnswered", (event) => {
+        const { username, answer } = event.detail;
 
-        if (answer && answer.trim() === currentQuestion.correct_answer) {
-            window.leaderboard[username] = (window.leaderboard[username] || 0) + 1;
-            console.log(`✅ ${username} answered correctly!`);
+        if (!window.participants.includes(username)) {
+            console.log(`${username} is not in the game!`);
+            return;
+        }
+
+        // Check if answer matches the correct one
+        if (answer === currentQuestion.correct_answer[0].toUpperCase()) {
+            window.leaderboard[username] += 10; // Add points
+            console.log(`✅ ${username} answered correctly! Score: ${window.leaderboard[username]}`);
         } else {
             console.log(`❌ ${username} answered incorrectly.`);
         }
@@ -71,8 +42,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (questionCount % 5 === 0) {
             updateLeaderboardDisplay();
         }
-    }
+    });
 
+    // Fetch a trivia question
     async function fetchTriviaQuestion() {
         try {
             const response = await fetch("https://opentdb.com/api.php?amount=1&type=multiple");
@@ -83,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Display a question
     function displayQuestion(data) {
         const questionText = document.getElementById("question-text");
         const buttons = document.querySelectorAll(".option-btn");
@@ -99,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentQuestion.correct_answer = data.correct_answer;
     }
 
+    // Update leaderboard UI
     function updateLeaderboardDisplay() {
         const leaderboardEl = document.getElementById("leaderboard");
         leaderboardEl.innerHTML = "";
@@ -112,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    // Load a new question
     async function loadNewQuestion() {
         const data = await fetchTriviaQuestion();
         if (data) {
@@ -124,3 +99,4 @@ document.addEventListener("DOMContentLoaded", () => {
     // Start the game
     loadNewQuestion();
 });
+
