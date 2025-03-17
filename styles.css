@@ -26,21 +26,27 @@ button {
   cursor: pointer;
 }
 
+button:focus, input:focus {
+  outline: 2px solid #6441a5;
+  outline-offset: 2px;
+}
+
 /* --- Chat Slider Container --- */
 .chat-slider {
   position: relative;
   width: 100%;
-  max-width: 100%;  /* Ensures the container does not exceed the viewport */
+  max-width: 80vw;
   margin: 20px auto;
   overflow: hidden;
-  padding: 0 50px;  /* Reserve 50px on left/right for slider buttons */
+  padding: 0 50px;
 }
 
 /* --- Chat Container --- */
 .chat-container {
   display: flex;
   transition: transform 0.3s ease-in-out;
-  flex-wrap: nowrap; /* Keep boxes in a single row */
+  flex-wrap: nowrap;
+  max-width: 100%;
 }
 
 /* --- Chat Box --- */
@@ -55,7 +61,7 @@ button {
   flex-direction: column;
   overflow: hidden;
   margin: 0 10px;
-  flex: 0 0 auto; /* Prevent shrinking */
+  flex: 0 0 auto;
 }
 
 /* Chat Header */
@@ -105,9 +111,9 @@ button {
   padding: 10px;
   overflow-y: auto;
   text-align: left;
+  scroll-behavior: smooth;
 }
 
-/* Chat Message Styling */
 .chat-message {
   padding: 5px 0;
   margin-bottom: 5px;
@@ -129,7 +135,6 @@ button {
   vertical-align: middle;
 }
 
-/* Emote Styling */
 .emote {
   width: 20px;
   height: auto;
@@ -137,54 +142,36 @@ button {
   margin: 0 2px;
 }
 
-/* Chat Input Area */
-.chat-input {
-  display: flex;
-  border-top: 1px solid #555;
-  padding: 10px;
-  background: #1a1a1d;
-}
-
-.chat-input input {
-  flex: 1;
-  padding: 5px;
-  border: none;
-  outline: none;
-  border-radius: 4px;
-}
-
-.chat-input button {
-  padding: 5px 10px;
-  margin-left: 5px;
-  border: none;
-  background: #6441a5;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-/* --- Slider Buttons --- */
-.slider-btn {
+/* --- Emote Picker --- */
+.emote-picker {
+  display: none;
   position: absolute;
-  top: 30px;  /* Place buttons in the top corners within reserved padding */
-  background: rgba(0,0,0,0.5);
-  border: none;
-  color: #fff;
-  font-size: 24px;
+  bottom: 45px;
+  background: #2a2a2e;
+  border: 1px solid #444;
   padding: 10px;
+  border-radius: 8px;
+  max-width: 320px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  will-change: transform;
+}
+
+.emote-picker img {
+  width: 35px;
+  height: auto;
+  margin: 4px;
+  transition: transform 0.2s;
   cursor: pointer;
-  z-index: 2;
 }
 
-#prevBtn {
-  left: 10px;
+.emote-picker img:hover {
+  transform: scale(1.1);
 }
 
-#nextBtn {
-  right: 10px;
-}
-
-/* Global Chat Input */
+/* --- Global Chat Input --- */
 .global-chat-input {
   margin-top: 60px;
   display: flex;
@@ -210,87 +197,6 @@ button {
   border-radius: 4px;
 }
 
-/* --- Emote Picker --- */
-.emote-picker-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  margin-left: 5px;
-}
-
-.emote-picker {
-  display: none;
-  position: absolute;
-  bottom: 45px; /* Adjust based on layout */
-  background: #2a2a2e;
-  border: 1px solid #444;
-  padding: 10px;
-  border-radius: 8px;
-  max-width: 320px;
-  max-height: 220px;
-  overflow-y: auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
-  z-index: 100;
-}
-
-.emote-picker.active {
-  display: block;
-}
-
-.emote-picker img {
-  width: 35px;
-  height: auto;
-  margin: 4px;
-  transition: transform 0.2s;
-  cursor: pointer;
-}
-
-.emote-picker img:hover {
-  transform: scale(1.1);
-}
-
-/* CSS for Responsive Columns */
-#trackedChannelsList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Responsive columns */
-  gap: 10px; /* Space between items */
-  width: 100%; /* Take up the full width of the container */
-  max-width: 100%; /* Ensure it doesn't overflow */
-  box-sizing: border-box;
-}
-
-
-#trackedChannelsList li {
-  border: 1px solid grey;
-  border-radius: 5px;
-  padding: 5px;
-  min-width: 100px; /* prevent item from getting to small */
-  max-width: 200px; /* prevent item from getting to large */
-  box-sizing: border-box; /* Add this line */
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-#channelManager {
-  display: none;
-  border: 1px solid #444;
-  padding: 10px;
-  margin: 10px auto;
-  width: 90%; /* Use a percentage to be responsive */
-  max-width: 900px; /*optional you can keep a max width*/
-  background: #222;
-  color: #fff;
-  box-sizing: border-box; /* Add this line */
-}
-
-#togglePokecatch {
-  display: none;
-}
-
 /* Version label styles */
 .version-label {
   position: fixed;
@@ -298,41 +204,27 @@ button {
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.8em;
-  color: #777; /* muted color */
+  color: #777;
 }
-
 
 /* --- Mobile-Specific Styles --- */
 @media (max-width: 768px) {
-  /* Apply these styles for screens 768px wide or less (typical tablets and phones) */
   body {
-    padding: 10px; /* Reduce padding on smaller screens */
+    padding: 10px;
   }
 
   .chat-slider {
-    padding: 0 20px; /* Reduce padding on mobile */
+    padding: 0 20px;
   }
 
   .chat-box {
-    width: 100%; /* Take up full width on mobile */
-    margin: 10px 0; /* Top and bottom margin instead of side margins */
-  }
-
-  .slider-btn {
-    top: 5px; /* Adjust position */
-  }
-
-  #prevBtn {
-    left: 5px; /* Adjust position */
-  }
-
-  #nextBtn {
-    right: 5px; /* Adjust position */
+    width: 100%;
+    margin: 10px 0;
   }
 
   .global-chat-input {
     margin-top: 30px;
-    flex-direction: column; /* Stack input and button vertically */
+    flex-direction: column;
   }
 
   .global-chat-input input {
@@ -340,40 +232,10 @@ button {
     margin-right: 0;
     margin-bottom: 5px;
   }
-
-  .emote-picker {
-    max-width: 100%; /* Emote picker takes full width on mobile */
-    bottom: 30px;
-  }
-
-  #trackedChannelsList {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Allow smaller items */
-  }
-
-  #trackedChannelsList li {
-    min-width: 80px;
-    max-width: 100%;
-  }
-  #channelManager {
-    width: 95%;
-  }
-
-
 }
 
-/* --- Very Small Mobile Screens --- */
-@media (max-width: 480px) {
-  .chat-header h4 {
-    font-size: 16px; /* Slightly smaller header font */
-  }
-
-  .close-btn {
-    width: 24px;
-    height: 24px;
-    font-size: 14px;
-  }
-
-  .emote-picker img {
-    width: 30px; /* Make emotes a bit smaller */
-  }
+/* --- Visibility Toggle for Auto-Pokecatch --- */
+#togglePokecatch {
+  display: inline-block;
+  visibility: hidden;
 }
