@@ -43,18 +43,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Check if answer matches the correct one
-        if (answer === currentQuestion.correct_answer[0].toUpperCase()) {
+        // Check if answer matches the correct one (ensure the case matches)
+        if (answer.trim().toUpperCase() === currentQuestion.correct_answer.toUpperCase()) {
             window.leaderboard[username] += 10; // Add points
             console.log(`✅ ${username} answered correctly! Score: ${window.leaderboard[username]}`);
         } else {
             console.log(`❌ ${username} answered incorrectly.`);
         }
 
-        // Update leaderboard every 5 questions
-        if (questionCount % 5 === 0) {
-            updateLeaderboardDisplay();
-        }
+        // Always update leaderboard after each answer
+        updateLeaderboardDisplay();
     });
 
     // Fetch a trivia question
@@ -65,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return data.results[0];
         } catch (error) {
             console.error("Error fetching trivia question:", error);
+            alert("Failed to fetch trivia question. Please try again.");
         }
     }
 
@@ -75,23 +74,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         questionText.innerHTML = data.question;
         let options = [data.correct_answer, ...data.incorrect_answers];
-        options.sort(() => Math.random() - 0.5);
+        options.sort(() => Math.random() - 0.5); // Shuffle answers
 
         buttons.forEach((btn, index) => {
             btn.textContent = options[index];
-            btn.dataset.answer = options[index];
+            btn.dataset.answer = options[index]; // Set the data-answer to the option
         });
 
-        currentQuestion.correct_answer = data.correct_answer;
+        currentQuestion.correct_answer = data.correct_answer; // Store correct answer for comparison
     }
 
     // Update leaderboard UI
     function updateLeaderboardDisplay() {
         const leaderboardEl = document.getElementById("leaderboard");
-        leaderboardEl.innerHTML = "";
+        leaderboardEl.innerHTML = ""; // Clear current leaderboard
 
         Object.entries(window.leaderboard)
-            .sort((a, b) => b[1] - a[1])  // Sort by score
+            .sort((a, b) => b[1] - a[1])  // Sort by score in descending order
             .forEach(([user, score]) => {
                 const li = document.createElement("li");
                 li.textContent = `${user}: ${score}`;
@@ -105,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data) {
             currentQuestion = data;
             questionCount++;
-            displayQuestion(data);
+            displayQuestion(data); // Display the new question
         }
     }
 

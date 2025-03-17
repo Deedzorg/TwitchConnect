@@ -60,17 +60,33 @@
     <!-- Emote picker popup for global input -->
     <div class="emote-picker" id="globalEmotePicker" ></div>
   </div>  
-  <div class="version-label">Version 1.04.49</div>
+  <div class="version-label">Version 1.044.9</div>
 
   <script src="script.js"></script>
   <button onclick="openGame()">Open Game</button>
-  <script>
+  <!-- HTML Input Field for Username -->
+<input type="text" id="userNameInput" placeholder="Enter your username" />
+
+<script>
     function openGame() {
-        sessionStorage.setItem('userName', 'TwitchUserName');
-        window.open('game.html', '_blank', 'width=800,height=600');
+        // Get the value from the input field
+        const userName = document.getElementById('userNameInput').value;
+
+        // Check if the username is provided
+        if (userName) {
+            console.log("Saving userName:", userName);
+
+            // Store the username in sessionStorage
+            sessionStorage.setItem('userName', userName);
+
+            // Open the game page in a new window
+            window.open('game.html', '_blank', 'width=800,height=600');
+        } else {
+            alert("Please enter a username.");
+        }
     }
-    </script>
-  
+</script>
+
 
 </body>
 </html>
