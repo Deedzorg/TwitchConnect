@@ -88,17 +88,26 @@ function addParticipant(username) {
     }
 }
 
-// Handle answer selection
 function handleAnswerClick(e) {
-    if (!currentUser) {
-        alert("Please log in with Twitch to play.");
-        return;
+    let answeringUser = currentUser; // Default to logged-in Twitch user
+
+    // If no logged-in user, allow chat participants to answer
+    if (!answeringUser || !participants.includes(answeringUser)) {
+        const enteredName = prompt("Enter your Twitch username to answer:");
+        if (!enteredName) return; // If canceled, do nothing
+
+        answeringUser = enteredName.trim();
+        
+        // Auto-add them to the game if they weren’t in `participants`
+        if (!participants.includes(answeringUser)) {
+            addParticipant(answeringUser);
+        }
     }
 
     const selectedAnswer = e.target.dataset.answer;
     if (selectedAnswer === currentQuestion.correct_answer) {
-        leaderboard[currentUser] = (leaderboard[currentUser] || 0) + 1;
-        alert(`Correct! +1 point for ${currentUser}.`);
+        leaderboard[answeringUser] = (leaderboard[answeringUser] || 0) + 1;
+        alert(`Correct! +1 point for ${answeringUser}.`);
     } else {
         alert(`Incorrect. The correct answer was "${currentQuestion.correct_answer}".`);
     }
@@ -110,6 +119,39 @@ function handleAnswerClick(e) {
 
     loadNewQuestion();
 }
+
+function handleAnswerClick(e) {
+    let answeringUser = currentUser; // Default to logged-in Twitch user
+
+    // If no logged-in user, allow chat participants to answer
+    if (!answeringUser || !participants.includes(answeringUser)) {
+        const enteredName = prompt("Enter your Twitch username to answer:");
+        if (!enteredName) return; // If canceled, do nothing
+
+        answeringUser = enteredName.trim();
+        
+        // Auto-add them to the game if they weren’t in `participants`
+        if (!participants.includes(answeringUser)) {
+            addParticipant(answeringUser);
+        }
+    }
+
+    const selectedAnswer = e.target.dataset.answer;
+    if (selectedAnswer === currentQuestion.correct_answer) {
+        leaderboard[answeringUser] = (leaderboard[answeringUser] || 0) + 1;
+        alert(`Correct! +1 point for ${answeringUser}.`);
+    } else {
+        alert(`Incorrect. The correct answer was "${currentQuestion.correct_answer}".`);
+    }
+
+    // Update leaderboard every 5 questions
+    if (questionCount % 5 === 0) {
+        updateLeaderboardDisplay();
+    }
+
+    loadNewQuestion();
+}
+
 
 // Attach event listeners to answer buttons
 document.querySelectorAll(".option-btn").forEach(btn => {
