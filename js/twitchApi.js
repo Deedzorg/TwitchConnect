@@ -237,3 +237,4 @@ window.fetchChannelPicture = fetchChannelPicture;
 window.checkLiveStatus = checkLiveStatus;
 window.loadTrackedChannels = loadTrackedChannels;
 window.saveTrackedChannels = saveTrackedChannels;
+window.initApp = initApp;
