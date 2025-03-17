@@ -18,3 +18,6 @@ async function checkTokenValidity() {
         })}`;
     }
 }
+
+// Ensure token is checked on page load
+document.addEventListener("DOMContentLoaded", checkTokenValidity);
