@@ -1,3 +1,15 @@
+async function initApp() {
+    await fetchGlobalBadges();
+    await fetchGlobalEmotes();
+    loadTrackedChannels();
+    checkLiveStatus();
+    setInterval(checkLiveStatus, 60000);
+}
+
+// Ensure initApp() is globally accessible
+window.initApp = initApp;
+
+
 async function fetchGlobalBadges() {
     const token = localStorage.getItem("twitchAccessToken");
     if (!token) return console.error("OAuth token missing in fetchGlobalBadges");
