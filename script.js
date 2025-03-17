@@ -839,6 +839,52 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         console.log(`${username} joined the game!`);
     }
   }
+  function getTwitchUserInfo() {
+    return new Promise((resolve, reject) => {
+        // Simulated Twitch API fetch (replace with real API if available)
+        setTimeout(() => {
+            const userInfo = {
+                display_name: "TwitchUser123",
+                id: "12345678",
+                profile_image_url: "https://static-cdn.jtvnw.net/jtv_user_pictures/...",
+            };
+
+            resolve(userInfo);
+        }, 500);
+    });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("script.js loaded.");
+    // Load previous data if it exists
+    window.participants = JSON.parse(localStorage.getItem("participants")) || [];
+    window.leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || {};
+
+    if (typeof getTwitchUserInfo === 'function') {
+        getTwitchUserInfo().then(userInfo => {
+            console.log("Twitch User Info Retrieved:", userInfo);
+            window.currentUser = userInfo.display_name;
+
+            // Store the current user in localStorage
+            localStorage.setItem("currentUser", userInfo.display_name);
+        }).catch(err => console.error("Failed to fetch Twitch user:", err));
+    } else {
+        console.error("Twitch integration not found in script.js");
+    }
+});
+
+// Function to add a participant and save to localStorage
+function addParticipant(username) {
+    if (!window.participants.includes(username)) {
+        window.participants.push(username);
+        window.leaderboard[username] = 0;
+
+        // Save updated data
+        localStorage.setItem("participants", JSON.stringify(window.participants));
+        localStorage.setItem("leaderboard", JSON.stringify(window.leaderboard));
+
+        console.log(`${username} joined the game!`);
+    }
+}
 
   function sendChatMessage(socket, channelName, message) {
     socket.send(`PRIVMSG #${channelName} :${message}\r\n`);

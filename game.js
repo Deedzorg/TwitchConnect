@@ -147,3 +147,23 @@ document.addEventListener("DOMContentLoaded", () => {
     // Start the game by loading the first question
     loadNewQuestion();
 });
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("Game.js loaded.");
+    // Retrieve stored user data
+    window.participants = JSON.parse(localStorage.getItem("participants")) || [];
+    window.leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || {};
+    let currentUser = localStorage.getItem("currentUser");
+
+    if (currentUser) {
+        console.log(`Welcome back, ${currentUser}!`);
+        const gameContainer = document.getElementById("game-container");
+        if (gameContainer) {
+            gameContainer.insertAdjacentHTML('afterbegin', `<h2>Welcome, ${currentUser}!</h2>`);
+        }
+    } else {
+        console.error("No Twitch user found in localStorage.");
+    }
+
+    // Load game question
+    loadNewQuestion();
+});
