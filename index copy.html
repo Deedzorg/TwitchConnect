@@ -41,14 +41,50 @@
           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0a6 6 0 11-12 0 6 6 0 0112 0z" clip-rule="evenodd"></path>
         </g>
       </svg>
+
+    </button>
+    <button id="togglePokecatch">Enable Auto-Pokecatch</button>
+    <style>#togglePokecatch {display: none;}</style>
+
+    <button onclick="openSoundClipper()">Open Sound Clipper</button>
+
+
+    <script>
+    function openSoundClipper() {
+        window.open('soundclipper.html', '_blank', 'width=800,height=600');
+    }
+    </script>
+
     <!-- Emote picker popup for global input -->
     <div class="emote-picker" id="globalEmotePicker" ></div>
   </div>  
-  <div class="version-label">Version 1.56.55</div>
+  <div class="version-label">Version 1.56</div>
 
   <script src="script.js"></script>
 
+  <button onclick="openGame()">Open Game</button>
+  <!-- HTML Input Field for Username -->
+<input type="text" id="userNameInput" placeholder="Enter your username" />
 
+<script>
+    function openGame() {
+        // Get the value from the input field
+        const userName = document.getElementById('userNameInput').value;
+
+        // Check if the username is provided
+        if (userName) {
+            console.log("Saving userName:", userName);
+
+            // Store the username in sessionStorage
+            sessionStorage.setItem('userName', userName);
+
+            // Open the game page in a new window
+            window.open('game.html', '_blank', 'width=800,height=600');
+        } else {
+            alert("Please enter a username.");
+        }
+    }
+</script>
 
 
 </body>
