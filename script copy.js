@@ -4,6 +4,7 @@ const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client I
 let username = null; // This will be set when fetching user data
 let oauthToken = null; // Declare it globally
 
+
 // Global variables to store badges and emotes  
 let globalBadges = {};
 let globalEmotes = {};
@@ -12,6 +13,14 @@ let trackedChannels = [];
 let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
 let channelPictures = {};
 let currentSlide = 0;
+
+let autoPokecatchEnabled = false;
+let lastCatchTime = 0;
+const CATCH_COOLDOWN = 5000;
+let first151Pokemon = [];
+ let storedOauthToken = null;
+let lastBallType = null;
+let purchaseIntent  = false;
 
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
@@ -544,6 +553,8 @@ async function addChat(providedChannel) {
     updateTrackedChannelsUI();
   }
 
+  
+
 function getCombinedEmotesForChannel(channel) {
   // Find the chat box that matches the current channel
   const chatBox = document.querySelector(`.chat-box[data-channel="${channel}"]`);
@@ -566,6 +577,8 @@ function insertAtCursor(input, textToInsert) {
   input.selectionStart = input.selectionEnd = start + textToInsert.length;
   input.focus();
 }
+
+
 
 function sendChatMessage(socket, channel, inputField) {
   const message = inputField.value;
@@ -704,6 +717,7 @@ function saveTrackedChannels() {
   localStorage.setItem("trackedChannels", JSON.stringify(trackedChannels));
 }
 
+
 function loadTrackedChannels() {
   const stored = localStorage.getItem("trackedChannels");
   if (stored) {
@@ -729,8 +743,70 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     socket.send(`JOIN #${channel}\r\n`);
   };
   
- 
+  function handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName) {
+    // Check for a wild Pokémon appearance message
+    if (
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      /A wild (.+) appears/i.test(rawMessage) &&
+      Date.now() - lastCatchTime > CATCH_COOLDOWN &&
+      socket.readyState === WebSocket.OPEN
+    ) {
+      const pokemonMatch = rawMessage.match(/A wild (.+) appears/i);
+      if (pokemonMatch) {
+        const pokemonName = pokemonMatch[1].toLowerCase();
+  
+        console.log(`Attempting to catch ${pokemonName} with pokeball in #${channelName}`);
+        sendChatMessage(socket, channelName, "!pokecatch");
+        setTimeout(() => {
+          sendChatMessage(socket, channelName, "!pokecatch");
+        }, 2500);
+  
+        // Set last ball type to pokeball since that's all we're using now.
+        lastBallType = "pokeball";
+        lastCatchTime = Date.now();
+      }
+    }
+    
+    // Error handling: if we receive a message saying "You don't own that ball."
+    if (
+      autoPokecatchEnabled &&
+      displayName === "PokemonCommunityGame" &&
+      /You don't own that ball\./i.test(rawMessage) &&
+      rawMessage.toLowerCase().includes(`@${username.toLowerCase()}`)
+    ) {
+      console.log(`Detected "You don't own that ball." message for @${username} in #${channelName}`);
+      console.log(`No pokeball available in #${channelName} for @${username}. Purchasing 5 pokeballs...`);
+      setTimeout(() => {
+        sendChatMessage(socket, channelName, "!pokeshop pokeball 5");
+      }, 2500);
+      purchaseIntent = true;
+    }
 
+    if (
+      purchaseIntent &&
+      autoPokecatchEnabled &&
+      displayName.toLowerCase() === "pokemoncommunitygame" &&
+      rawMessage.toLowerCase().includes(`@${username.toLowerCase()} purchase successful!`)
+    ) {
+      console.log(`Purchase successful message received for @${username} in #${channelName}`);
+      console.log(`Attempting to catch with pokeball after purchase in #${channelName}`);
+      setTimeout(() => {
+        sendChatMessage(socket, channelName, "!pokecatch");
+      }, 2500);
+      // Reset the flag after handling the purchase
+      purchaseIntent = false;
+    }
+    // Only check for the "purchase successful" if purchaseIntent is true
+  }
+  
+  function addParticipant(username) {
+    if (!participants.includes(username)) {
+        participants.push(username);
+        leaderboard[username] = 0; // Initialize score
+        console.log(`${username} joined the game!`);
+    }
+  }
   function getTwitchUserInfo() {
     return new Promise((resolve, reject) => {
         // Simulated Twitch API fetch (replace with real API if available)
@@ -764,7 +840,37 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     }
 });
 
+function handleChatMessage(channel, user, message, self) {
+  if (self) return; // Ignore bot's own messages
+
+  const username = user["display-name"];
+  const command = message.trim().toLowerCase();
+
+  // Player wants to join
+  if (command === "!playgame") {
+      console.log(`${username} wants to play!`);
+      window.dispatchEvent(new CustomEvent("PlayerJoined", { detail: { username } }));
+  }
+
+  // Check if the message is an answer (A, B, C, or D)
+  if (["a", "b", "c", "d"].includes(command)) {
+      console.log(`${username} answered: ${command.toUpperCase()}`);
+      window.dispatchEvent(new CustomEvent("PlayerAnswered", { detail: { username, answer: command.toUpperCase() } }));
+  }
+}
 // Function to add a participant and save to localStorage
+function addParticipant(username) {
+    if (!window.participants.includes(username)) {
+        window.participants.push(username);
+        window.leaderboard[username] = 0;
+
+        // Save updated data
+        localStorage.setItem("participants", JSON.stringify(window.participants));
+        localStorage.setItem("leaderboard", JSON.stringify(window.leaderboard));
+
+        console.log(`${username} joined the game!`);
+    }
+}
 
   function sendChatMessage(socket, channelName, message) {
     socket.send(`PRIVMSG #${channelName} :${message}\r\n`);
@@ -848,6 +954,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         socket.send(`PRIVMSG #${channelName} :honk\r\n`);
       }
     }
+     handlePokecatch(autoPokecatchEnabled, displayName, rawMessage, socket, channelName)
   };
   
   socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
