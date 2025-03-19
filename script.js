@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (data.data && data.data.length > 0) {
         username = data.data[0].display_name;
         console.log('Logged in as:', username);
+        logoutBtn.style.display = "inline-block";
         initApp();
       } else {
         console.error('No user data found.');
