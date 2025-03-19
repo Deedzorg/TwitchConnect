@@ -41,14 +41,15 @@ document.addEventListener("DOMContentLoaded", () => {
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
 
-    window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
+   /* window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
       new URLSearchParams({
         
         client_id: clientId,
         redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
         response_type: 'token',
         scope: 'user:read:email chat:read chat:edit'
-      });
+      });*/
+      
   } else {
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-block";
