@@ -22,9 +22,11 @@ async function initApp() {
   setInterval(checkLiveStatus, 60000);
 }
 
-
-
 document.addEventListener("DOMContentLoaded", () => {
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
   // Define chatContainer globally
   window.chatContainer = document.getElementById("chat-container");
   if (!window.chatContainer) {
@@ -36,14 +38,20 @@ document.addEventListener("DOMContentLoaded", () => {
   oauthToken = localStorage.getItem('twitchAccessToken');
 
   if (!oauthToken) {
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+
     window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
       new URLSearchParams({
+        
         client_id: clientId,
         redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
         response_type: 'token',
         scope: 'user:read:email chat:read chat:edit'
       });
   } else {
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
     fetch('https://api.twitch.tv/helix/users', {
       headers: {
         'Client-ID': clientId,
@@ -63,6 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .catch(err => console.error('Error fetching user data:', err));
   }
+  loginBtn.onclick = login;
+  logoutBtn.onclick = logout;
 });
 
 async function fetchGlobalBadges() {
@@ -240,6 +250,22 @@ function sendGlobalMessage() {
     }
   });
   globalInput.value = "";
+}
+
+function login() {
+  window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
+    new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectURI,
+      response_type: 'token',
+      scope: 'user:read:email chat:read chat:edit'
+    });
+}
+
+// Clear token from localStorage and reload
+function logout() {
+  localStorage.removeItem('twitchAccessToken');
+  window.location.reload();
 }
 
 function removeTrackedChannel(channel) {
