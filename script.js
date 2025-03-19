@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const redirectURI = 'https://deedzorg.github.io/TwitchConnect/callback.html';
 
   // Define chatContainer globally
   window.chatContainer = document.getElementById("chat-container");
@@ -49,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
         response_type: 'token',
         scope: 'user:read:email chat:read chat:edit'
       });*/
-      
+
   } else {
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-block";
@@ -258,7 +259,7 @@ function login() {
   window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
     new URLSearchParams({
       client_id: clientId,
-      redirect_uri: redirectURI,
+      redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
       response_type: 'token',
       scope: 'user:read:email chat:read chat:edit'
     });
