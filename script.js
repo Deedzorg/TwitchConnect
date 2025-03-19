@@ -1,5 +1,6 @@
 // --- Global Configuration ---
-const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client ID
+const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client ID 
+const redirectURI = 'https://deedzorg.github.io/TwitchConnect/callback.html';
 // --- Global Variables ---        
 let username = null; // This will be set when fetching user data
 let oauthToken = null; // Declare it globally
@@ -26,8 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
-  const redirectURI = 'https://deedzorg.github.io/TwitchConnect/callback.html';
-
+ 
   // Define chatContainer globally
   window.chatContainer = document.getElementById("chat-container");
   if (!window.chatContainer) {
