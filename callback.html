@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Twitch Callback</title>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      // Extract the hash portion (everything after the '#')
+      const hash = window.location.hash.substring(1);
+      // Create an URLSearchParams object from the hash string
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+
+      if (accessToken) {
+        // Save the token in localStorage (or wherever you prefer)
+        localStorage.setItem('twitchAccessToken', accessToken);
+        // Optionally, you can also store other parameters if needed
+        // Redirect the user back to your main app page
+        window.location.href = '/TwitchConnect/index.html'; // update if your main page is elsewhere
+      } else {
+        console.error("No access token found in the URL.");
+      }
+    });
+  </script>
+</head>
+<body>
+  <p>Logging you in, please wait...</p>
+</body>
+</html>
