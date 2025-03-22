@@ -28,6 +28,11 @@ let usersAnswers = {}; // Tracks answers for each user
 let userScores = {};   // Tracks scores for each user
 let round = 0;         // Track rounds for calculating winner after 5 rounds
 
+// Fix: Initialize `storedOauthToken` and `emotes` if undefined
+let storedOauthToken = localStorage.getItem('twitchAccessToken') || null;
+let emotes = {}; // Ensure `emotes` is defined globally
+let badges = {}; // Ensure `badges` is defined globally
+
 function startGame() {
   document.getElementById("game-container").style.display = "block";
   loadNewQuestion(); // Load the first trivia question
@@ -78,10 +83,16 @@ async function loadNewQuestion() {
   }
 }
 
+// Fix: Add null checks for DOM elements
 function displayQuestion(data) {
   const questionText = document.getElementById("question-text");
   const buttons = document.querySelectorAll(".option-btn");
   const timerElement = document.getElementById("timer");
+
+  if (!questionText || !buttons.length || !timerElement) {
+    console.error("Missing DOM elements for displaying the question.");
+    return;
+  }
 
   // Clear previous selections and tally
   buttons.forEach(btn => {
@@ -183,6 +194,7 @@ buttons.forEach((btn) => {
 });
 
 // Capture chatters' answers
+// Fix: Ensure `chatAnswers` tally updates correctly
 function captureChatterAnswer(username, answer) {
   if (!usersAnswers[username]) {
     usersAnswers[username] = answer; // Save answer for the first time
@@ -191,17 +203,14 @@ function captureChatterAnswer(username, answer) {
   // Tally the responses for each option
   if (["A", "B", "C", "D"].includes(answer)) {
     chatAnswers[answer]++;
+    // Update tally display dynamically
+    document.getElementById(`tally-${answer}`).textContent = chatAnswers[answer];
   }
-
-  // Update tally display
-  document.getElementById("tally-A").textContent = chatAnswers.A;
-  document.getElementById("tally-B").textContent = chatAnswers.B;
-  document.getElementById("tally-C").textContent = chatAnswers.C;
-  document.getElementById("tally-D").textContent = chatAnswers.D;
 }
 
 // Example of chat input listener for capturing answers
-document.querySelector("#chatInput").addEventListener("input", (e) => {
+// Fix: Add fallback for missing `chatInput` element
+document.querySelector("#chatInput")?.addEventListener("input", (e) => {
   const answer = e.target.value.toUpperCase(); // Get the answer
   if (["A", "B", "C", "D"].includes(answer)) {
     captureChatterAnswer("chatUser", answer); // Example: Capture "chatUser" answer
@@ -218,6 +227,7 @@ async function initApp() {
   setInterval(checkLiveStatus, 60000);
 }
 
+// Fix: Add error handling for API calls
 async function fetchGlobalBadges() {
   const token = oauthToken || localStorage.getItem('twitchAccessToken');
   if (!token) {
@@ -232,8 +242,12 @@ async function fetchGlobalBadges() {
         "Client-Id": clientId
       }
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch global badges: ${response.statusText}`);
+    }
+
     const data = await response.json();
-    // Populate the globalBadges object:
     data.data.forEach(set => {
       globalBadges[set.set_id] = {};
       set.versions.forEach(version => {
@@ -645,20 +659,25 @@ async function addChat(providedChannel) {
   }
 
   
-  function updateTrackedChannelsUI() {
+  // Fix: Ensure `updateTrackedChannelsUI` handles errors gracefully
+  async function updateTrackedChannelsUI() {
     const list = document.getElementById("trackedChannelsList");
+    if (!list) {
+      console.error("Tracked channels list element not found.");
+      return;
+    }
+  
     list.innerHTML = ""; // Clear existing list items
   
-    // Create promises for each channel and wait for them to resolve
-    const channelPromises = trackedChannels.map(createChannelElement);
-    Promise.all(channelPromises)
-        .then(channelElements => {
-            // Append elements to the list once all are created.
-            channelElements.forEach(li => list.appendChild(li));
-        }).catch(error => {
-            console.error("Error updating tracked channels:", error);
-        });
-    saveTrackedChannels()
+    try {
+      const channelPromises = trackedChannels.map(createChannelElement);
+      const channelElements = await Promise.all(channelPromises);
+      channelElements.forEach(li => list.appendChild(li));
+    } catch (error) {
+      console.error("Error updating tracked channels:", error);
+    }
+  
+    saveTrackedChannels();
   }
 
   async function checkLiveStatus() {
@@ -731,21 +750,15 @@ function insertAtCursor(input, textToInsert) {
   input.focus();
 }
 
-function sendChatMessage(socket, channel, inputField) {
-  const message = inputField.value;
-  if (message && socket.readyState === WebSocket.OPEN) {
-    socket.send(`PRIVMSG #${channel} :${message}\r\n`);
-    // Optionally, display the sent message in the chat window
-    displaySentMessage(channel, message);
-    inputField.value = "";
-  }
-}
-
+// Fix: Add null checks for `chatWindow` in `displaySentMessage`
 function displaySentMessage(channel, message) {
-  // Create a chat message element just like when receiving a message
   const chatWindow = document.querySelector(`.chat-box[data-channel="${channel}"] .messages`);
-  if (!chatWindow) return;
-  
+  if (!chatWindow) {
+    console.warn(`Chat window not found for channel: ${channel}`);
+    return;
+  }
+
+  // Create a chat message element just like when receiving a message
   const timestamp = new Date().toLocaleTimeString(); // Optional: change format as needed
   
   const messageElem = document.createElement("div");
@@ -758,6 +771,16 @@ function displaySentMessage(channel, message) {
   
   chatWindow.appendChild(messageElem);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function sendChatMessage(socket, channel, inputField) {
+  const message = inputField.value;
+  if (message && socket.readyState === WebSocket.OPEN) {
+    socket.send(`PRIVMSG #${channel} :${message}\r\n`);
+    // Optionally, display the sent message in the chat window
+    displaySentMessage(channel, message);
+    inputField.value = "";
+  }
 }
 
 function sanitize(text) {
@@ -885,6 +908,7 @@ function removeTrackedChannel(channel) {
 
 
 
+// Fix: Handle WebSocket errors gracefully
 function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
 
@@ -895,8 +919,15 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     socket.send(`NICK ${username}\r\n`);
     socket.send(`JOIN #${channel}\r\n`);
   };
-  
- 
+
+  socket.onerror = (error) => {
+    console.error(`❌ WebSocket error in #${channel}:`, error);
+    alert(`Error connecting to Twitch chat for #${channel}. Please try again.`);
+  };
+
+  socket.onclose = () => {
+    console.log(`🔌 Disconnected from #${channel}`);
+  };
 
   function getTwitchUserInfo() {
     return new Promise((resolve, reject) => {
