@@ -23,14 +23,15 @@ let questionCount = 0;
 let userAnswer = null; // To track the streamer’s selected answer
 let chatAnswers = { A: 0, B: 0, C: 0, D: 0 }; // Tally for chatters
 
-
+// --- Global Variables ---
+let usersAnswers = {}; // Tracks answers for each user
+let userScores = {};   // Tracks scores for each user
+let round = 0;         // Track rounds for calculating winner after 5 rounds
 
 function startGame() {
   document.getElementById("game-container").style.display = "block";
   loadNewQuestion(); // Load the first trivia question
 }
-
-
 
 async function fetchTriviaQuestion() {
   const maxRetries = 5;
@@ -40,10 +41,7 @@ async function fetchTriviaQuestion() {
     try {
       const response = await fetch("https://opentdb.com/api.php?amount=1");
       const data = await response.json();
-
-      // Log the full response as a string for easier inspection
-      console.log("API Response: ", JSON.stringify(data, null, 2));
-
+      
       // Check if the response contains a question
       if (data.response_code === 0 && data.results && data.results.length > 0) {
         return data.results[0]; // Return the first trivia question
@@ -65,8 +63,6 @@ async function fetchTriviaQuestion() {
   return null;
 }
 
-
-// Load a new trivia question
 async function loadNewQuestion() {
   const data = await fetchTriviaQuestion();
   if (data) {
@@ -75,13 +71,13 @@ async function loadNewQuestion() {
     displayQuestion(data);
     questionAnswered = false;
     chatAnswers = { A: 0, B: 0, C: 0, D: 0 }; // Reset chat tally
+    usersAnswers = {}; // Reset users' answers for new question
   } else {
     console.log("No new question to display.");
     alert("Failed to load a trivia question. Please try again later.");
   }
 }
 
-// Display the trivia question and options
 function displayQuestion(data) {
   const questionText = document.getElementById("question-text");
   const buttons = document.querySelectorAll(".option-btn");
@@ -113,11 +109,11 @@ function displayQuestion(data) {
   startTimer(timerElement); // Start the timer when the question is displayed
 }
 
-// Show the answer results (highlight correct/incorrect answers)
 function showAnswerResults() {
   const correctAnswer = currentQuestion.correct_answer;
   const buttons = document.querySelectorAll(".option-btn");
 
+  // Update answer tally for chat
   buttons.forEach((btn) => {
     if (btn.textContent === correctAnswer) {
       btn.classList.add("correct");
@@ -126,14 +122,26 @@ function showAnswerResults() {
     }
   });
 
+  // Tally user responses
+  for (const [user, answer] of Object.entries(usersAnswers)) {
+    if (answer === correctAnswer) {
+      if (!userScores[user]) userScores[user] = 0; // Initialize if not already
+      userScores[user] += 1; // Increment the score of the correct answer
+    }
+  }
+
   alert(`The correct answer is: ${correctAnswer}`);
+  
+  // Check if it's time to calculate the round winner
+  round++;
+  if (round % 5 === 0) {
+    const roundWinner = Object.entries(userScores).reduce((max, user) => user[1] > max[1] ? user : max, [null, 0]);
+    alert(`Round ${round} winner is: ${roundWinner[0]} with ${roundWinner[1]} points`);
+  }
 
   loadNewQuestion(); // Load a new question after the results
 }
 
-
-
-// Timer function
 function startTimer(timerElement) {
   let timeRemaining = timerDuration / 1000;
   timerElement.innerText = `Time remaining: ${timeRemaining}s`;
@@ -149,7 +157,6 @@ function startTimer(timerElement) {
   }, 1000);
 }
 
-// Stop the timer when an answer is submitted
 function stopTimer() {
   clearInterval(timer);
 }
@@ -167,13 +174,38 @@ function handleStreamersAnswer(selectedAnswer) {
   });
 }
 
-// Event listener to capture streamer’s answer when clicked
 const buttons = document.querySelectorAll(".option-btn");
 buttons.forEach((btn) => {
   btn.addEventListener("click", (e) => {
     const selectedAnswer = e.target.textContent;
     handleStreamersAnswer(selectedAnswer); // Highlight the selected answer
   });
+});
+
+// Capture chatters' answers
+function captureChatterAnswer(username, answer) {
+  if (!usersAnswers[username]) {
+    usersAnswers[username] = answer; // Save answer for the first time
+  }
+
+  // Tally the responses for each option
+  if (["A", "B", "C", "D"].includes(answer)) {
+    chatAnswers[answer]++;
+  }
+
+  // Update tally display
+  document.getElementById("tally-A").textContent = chatAnswers.A;
+  document.getElementById("tally-B").textContent = chatAnswers.B;
+  document.getElementById("tally-C").textContent = chatAnswers.C;
+  document.getElementById("tally-D").textContent = chatAnswers.D;
+}
+
+// Example of chat input listener for capturing answers
+document.querySelector("#chatInput").addEventListener("input", (e) => {
+  const answer = e.target.value.toUpperCase(); // Get the answer
+  if (["A", "B", "C", "D"].includes(answer)) {
+    captureChatterAnswer("chatUser", answer); // Example: Capture "chatUser" answer
+  }
 });
 
 
@@ -941,6 +973,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load previous data if it exists
     window.participants = JSON.parse(localStorage.getItem("participants")) || [];
     window.leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || {};
+   
+    window.chatContainer = document.getElementById("chat-container");
+    if (!window.chatContainer) {
+      console.error("chatContainer is missing from the DOM.");
+      return;
+    }
+  
+
 
     if (typeof getTwitchUserInfo === 'function') {
         getTwitchUserInfo().then(userInfo => {
