@@ -789,8 +789,6 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
 });
 
 // Function to add a participant and save to localStorage
-
-
   
   socket.onmessage = (event) => {
     console.log(`[${channel}] Received:`, event.data);
