@@ -14,6 +14,214 @@ let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
 let channelPictures = {};
 let currentSlide = 0;
 
+let timer;
+let timerDuration = 120000; // 2 minutes in milliseconds
+let questionAnswered = false;
+let currentQuestion = null;
+let questionCount = 0;
+
+let userAnswer = null; // To track the streamer’s selected answer
+let chatAnswers = { A: 0, B: 0, C: 0, D: 0 }; // Tally for chatters
+
+// --- Global Variables ---
+let usersAnswers = {}; // Tracks answers for each user
+let userScores = {};   // Tracks scores for each user
+let round = 0;         // Track rounds for calculating winner after 5 rounds
+
+// Fix: Initialize `storedOauthToken` and `emotes` if undefined
+let storedOauthToken = localStorage.getItem('twitchAccessToken') || null;
+let emotes = {}; // Ensure `emotes` is defined globally
+let badges = {}; // Ensure `badges` is defined globally
+
+function startGame() {
+  document.getElementById("game-container").style.display = "block";
+  loadNewQuestion(); // Load the first trivia question
+}
+
+async function fetchTriviaQuestion() {
+  const maxRetries = 5;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch("https://opentdb.com/api.php?amount=1");
+      const data = await response.json();
+      
+      // Check if the response contains a question
+      if (data.response_code === 0 && data.results && data.results.length > 0) {
+        return data.results[0]; // Return the first trivia question
+      } else if (data.response_code === 5) {
+        console.warn("No trivia questions found, retrying...");
+        attempt++;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        throw new Error("Unable to fetch trivia questions. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error fetching trivia question:", error);
+      alert(error.message);
+      return null;
+    }
+  }
+
+  console.error("Max retries reached, no trivia question found.");
+  return null;
+}
+
+async function loadNewQuestion() {
+  const data = await fetchTriviaQuestion();
+  if (data) {
+    currentQuestion = data;
+    questionCount++;
+    displayQuestion(data);
+    questionAnswered = false;
+    chatAnswers = { A: 0, B: 0, C: 0, D: 0 }; // Reset chat tally
+    usersAnswers = {}; // Reset users' answers for new question
+  } else {
+    console.log("No new question to display.");
+    alert("Failed to load a trivia question. Please try again later.");
+  }
+}
+
+// Fix: Add null checks for DOM elements
+function displayQuestion(data) {
+  const questionText = document.getElementById("question-text");
+  const buttons = document.querySelectorAll(".option-btn");
+  const timerElement = document.getElementById("timer");
+
+  if (!questionText || !buttons.length || !timerElement) {
+    console.error("Missing DOM elements for displaying the question.");
+    return;
+  }
+
+  // Clear previous selections and tally
+  buttons.forEach(btn => {
+    btn.classList.remove("selected", "correct", "incorrect");
+    btn.disabled = false; // Enable buttons for new question
+  });
+
+  // Reset tally display for new question
+  document.getElementById("tally-A").textContent = chatAnswers.A;
+  document.getElementById("tally-B").textContent = chatAnswers.B;
+  document.getElementById("tally-C").textContent = chatAnswers.C;
+  document.getElementById("tally-D").textContent = chatAnswers.D;
+
+  questionText.innerHTML = data.question;
+  let options = [data.correct_answer, ...data.incorrect_answers];
+  options.sort(() => Math.random() - 0.5); // Shuffle answers
+
+  buttons.forEach((btn, index) => {
+    btn.textContent = options[index];
+    btn.dataset.answer = options[index];
+  });
+
+  currentQuestion.correct_answer = data.correct_answer;
+
+  startTimer(timerElement); // Start the timer when the question is displayed
+}
+
+function showAnswerResults() {
+  const correctAnswer = currentQuestion.correct_answer;
+  const buttons = document.querySelectorAll(".option-btn");
+
+  // Update answer tally for chat
+  buttons.forEach((btn) => {
+    if (btn.textContent === correctAnswer) {
+      btn.classList.add("correct");
+    } else {
+      btn.classList.add("incorrect");
+    }
+  });
+
+  // Tally user responses
+  for (const [user, answer] of Object.entries(usersAnswers)) {
+    if (answer === correctAnswer) {
+      if (!userScores[user]) userScores[user] = 0; // Initialize if not already
+      userScores[user] += 1; // Increment the score of the correct answer
+    }
+  }
+
+  alert(`The correct answer is: ${correctAnswer}`);
+  
+  // Check if it's time to calculate the round winner
+  round++;
+  if (round % 5 === 0) {
+    const roundWinner = Object.entries(userScores).reduce((max, user) => user[1] > max[1] ? user : max, [null, 0]);
+    alert(`Round ${round} winner is: ${roundWinner[0]} with ${roundWinner[1]} points`);
+  }
+
+  loadNewQuestion(); // Load a new question after the results
+}
+
+function startTimer(timerElement) {
+  let timeRemaining = timerDuration / 1000;
+  timerElement.innerText = `Time remaining: ${timeRemaining}s`;
+
+  timer = setInterval(() => {
+    timeRemaining--;
+    timerElement.innerText = `Time remaining: ${timeRemaining}s`;
+
+    if (timeRemaining <= 0) {
+      clearInterval(timer);
+      showAnswerResults();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timer);
+}
+
+function handleStreamersAnswer(selectedAnswer) {
+  userAnswer = selectedAnswer; // Store the streamer’s answer
+  const buttons = document.querySelectorAll(".option-btn");
+
+  buttons.forEach((btn) => {
+    if (btn.textContent === selectedAnswer) {
+      btn.classList.add("selected"); // Highlight the selected answer
+    } else {
+      btn.classList.remove("selected"); // Remove highlight from other buttons
+    }
+  });
+}
+
+const buttons = document.querySelectorAll(".option-btn");
+buttons.forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const selectedAnswer = e.target.textContent;
+    handleStreamersAnswer(selectedAnswer); // Highlight the selected answer
+  });
+});
+
+// Capture chatters' answers
+// Fix: Ensure `chatAnswers` tally updates correctly
+function captureChatterAnswer(username, answer) {
+  if (!usersAnswers[username]) {
+    usersAnswers[username] = answer; // Save answer for the first time
+  }
+
+  // Tally the responses for each option
+  if (["A", "B", "C", "D"].includes(answer)) {
+    chatAnswers[answer]++;
+    // Update tally display dynamically
+    document.getElementById(`tally-${answer}`).textContent = chatAnswers[answer];
+  }
+}
+
+// Example of chat input listener for capturing answers
+// Fix: Add null check for `#chatInput` to avoid TypeError
+const chatInput = document.querySelector("#chatInput");
+if (chatInput) {
+  chatInput.addEventListener("input", (e) => {
+    const answer = e.target.value.toUpperCase(); // Get the answer
+    if (["A", "B", "C", "D"].includes(answer)) {
+      captureChatterAnswer("chatUser", answer); // Example: Capture "chatUser" answer
+    }
+  });
+} else {
+  console.warn("Element with ID 'chatInput' not found in the DOM.");
+}
+
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
   await fetchGlobalBadges();
@@ -23,61 +231,7 @@ async function initApp() {
   setInterval(checkLiveStatus, 60000);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
- 
-  // Define chatContainer globally
-  window.chatContainer = document.getElementById("chat-container");
-  if (!window.chatContainer) {
-    console.error("chatContainer is missing from the DOM.");
-    return;
-  }
-
-  storedOauthToken = localStorage.getItem('twitchAccessToken');
-  oauthToken = localStorage.getItem('twitchAccessToken');
-
-  if (!oauthToken) {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-
-   /* window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
-      new URLSearchParams({
-        
-        client_id: clientId,
-        redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
-        response_type: 'token',
-        scope: 'user:read:email chat:read chat:edit'
-      });*/
-
-  } else {
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    fetch('https://api.twitch.tv/helix/users', {
-      headers: {
-        'Client-ID': clientId,
-        'Authorization': `Bearer ${oauthToken}`
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log(data)
-      if (data.data && data.data.length > 0) {
-        username = data.data[0].display_name;
-        console.log('Logged in as:', username);
-        logoutBtn.style.display = "inline-block";
-        initApp();
-      } else {
-        console.error('No user data found.');
-      }
-    })
-    .catch(err => console.error('Error fetching user data:', err));
-  }
-  loginBtn.onclick = login;
-  logoutBtn.onclick = logout;
-});
-
+// Fix: Add error handling for API calls
 async function fetchGlobalBadges() {
   const token = oauthToken || localStorage.getItem('twitchAccessToken');
   if (!token) {
@@ -92,8 +246,12 @@ async function fetchGlobalBadges() {
         "Client-Id": clientId
       }
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch global badges: ${response.statusText}`);
+    }
+
     const data = await response.json();
-    // Populate the globalBadges object:
     data.data.forEach(set => {
       globalBadges[set.set_id] = {};
       set.versions.forEach(version => {
@@ -505,20 +663,25 @@ async function addChat(providedChannel) {
   }
 
   
-  function updateTrackedChannelsUI() {
+  // Fix: Ensure `updateTrackedChannelsUI` handles errors gracefully
+  async function updateTrackedChannelsUI() {
     const list = document.getElementById("trackedChannelsList");
+    if (!list) {
+      console.error("Tracked channels list element not found.");
+      return;
+    }
+  
     list.innerHTML = ""; // Clear existing list items
   
-    // Create promises for each channel and wait for them to resolve
-    const channelPromises = trackedChannels.map(createChannelElement);
-    Promise.all(channelPromises)
-        .then(channelElements => {
-            // Append elements to the list once all are created.
-            channelElements.forEach(li => list.appendChild(li));
-        }).catch(error => {
-            console.error("Error updating tracked channels:", error);
-        });
-    saveTrackedChannels()
+    try {
+      const channelPromises = trackedChannels.map(createChannelElement);
+      const channelElements = await Promise.all(channelPromises);
+      channelElements.forEach(li => list.appendChild(li));
+    } catch (error) {
+      console.error("Error updating tracked channels:", error);
+    }
+  
+    saveTrackedChannels();
   }
 
   async function checkLiveStatus() {
@@ -591,21 +754,15 @@ function insertAtCursor(input, textToInsert) {
   input.focus();
 }
 
-function sendChatMessage(socket, channel, inputField) {
-  const message = inputField.value;
-  if (message && socket.readyState === WebSocket.OPEN) {
-    socket.send(`PRIVMSG #${channel} :${message}\r\n`);
-    // Optionally, display the sent message in the chat window
-    displaySentMessage(channel, message);
-    inputField.value = "";
-  }
-}
-
+// Fix: Add null checks for `chatWindow` in `displaySentMessage`
 function displaySentMessage(channel, message) {
-  // Create a chat message element just like when receiving a message
   const chatWindow = document.querySelector(`.chat-box[data-channel="${channel}"] .messages`);
-  if (!chatWindow) return;
-  
+  if (!chatWindow) {
+    console.warn(`Chat window not found for channel: ${channel}`);
+    return;
+  }
+
+  // Create a chat message element just like when receiving a message
   const timestamp = new Date().toLocaleTimeString(); // Optional: change format as needed
   
   const messageElem = document.createElement("div");
@@ -618,6 +775,16 @@ function displaySentMessage(channel, message) {
   
   chatWindow.appendChild(messageElem);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function sendChatMessage(socket, channel, inputField) {
+  const message = inputField.value;
+  if (message && socket.readyState === WebSocket.OPEN) {
+    socket.send(`PRIVMSG #${channel} :${message}\r\n`);
+    // Optionally, display the sent message in the chat window
+    displaySentMessage(channel, message);
+    inputField.value = "";
+  }
 }
 
 function sanitize(text) {
@@ -742,6 +909,10 @@ function removeTrackedChannel(channel) {
   updateTrackedChannelsUI();
 }
 
+
+
+
+// Fix: Handle WebSocket errors gracefully
 function connectToTwitchChat(channel, chatWindow, badges, emotes) {
   const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
 
@@ -752,8 +923,15 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     socket.send(`NICK ${username}\r\n`);
     socket.send(`JOIN #${channel}\r\n`);
   };
-  
- 
+
+  socket.onerror = (error) => {
+    console.error(`❌ WebSocket error in #${channel}:`, error);
+    alert(`Error connecting to Twitch chat for #${channel}. Please try again.`);
+  };
+
+  socket.onclose = () => {
+    console.log(`🔌 Disconnected from #${channel}`);
+  };
 
   function getTwitchUserInfo() {
     return new Promise((resolve, reject) => {
@@ -769,11 +947,75 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
         }, 500);
     });
   }
+  
+document.addEventListener("DOMContentLoaded", () => {
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+ 
+  // Define chatContainer globally
+  window.chatContainer = document.getElementById("chat-container");
+  if (!window.chatContainer) {
+    console.error("chatContainer is missing from the DOM.");
+    return;
+  }
+
+  storedOauthToken = localStorage.getItem('twitchAccessToken');
+  oauthToken = localStorage.getItem('twitchAccessToken');
+
+  if (!oauthToken) {
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+
+   /* window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
+      new URLSearchParams({
+        
+        client_id: clientId,
+        redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
+        response_type: 'token',
+        scope: 'user:read:email chat:read chat:edit'
+      });*/
+
+  } else {
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    fetch('https://api.twitch.tv/helix/users', {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}`
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log(data)
+      if (data.data && data.data.length > 0) {
+        username = data.data[0].display_name;
+        console.log('Logged in as:', username);
+        logoutBtn.style.display = "inline-block";
+        initApp();
+      } else {
+        console.error('No user data found.');
+      }
+    })
+    .catch(err => console.error('Error fetching user data:', err));
+  }
+  loginBtn.onclick = login;
+  logoutBtn.onclick = logout;
+});
+
   document.addEventListener("DOMContentLoaded", () => {
     console.log("script.js loaded.");
     // Load previous data if it exists
     window.participants = JSON.parse(localStorage.getItem("participants")) || [];
     window.leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || {};
+   
+    window.chatContainer = document.getElementById("chat-container");
+    if (!window.chatContainer) {
+      console.error("chatContainer is missing from the DOM.");
+      return;
+    }
+  
+
 
     if (typeof getTwitchUserInfo === 'function') {
         getTwitchUserInfo().then(userInfo => {
@@ -788,92 +1030,126 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     }
 });
 
-// Function to add a participant and save to localStorage
+socket.onmessage = (event) => {
+  console.log(`[${channel}] Received:`, event.data);
 
-
-  
-  socket.onmessage = (event) => {
-    console.log(`[${channel}] Received:`, event.data);
-  
-    if (event.data.startsWith("PING")) {
-      socket.send("PONG :tmi.twitch.tv\r\n");
-      return;
-    }
-  
-    if (event.data.includes('NOTICE * :Login authentication failed')) {
-      console.error('Authentication failed: Invalid OAuth token or username.');
-      alert('Authentication failed: Invalid OAuth token or username.');
-      socket.close();
-      return;
-    }
-  
-    if (event.data.includes('NOTICE') && event.data.includes('Improperly formatted auth')) {
-      console.error('Improperly formatted auth');
-      alert('Improperly formatted auth');
-      socket.close();
-      return;
-    }
-  
-    let tags = {};
-    let messageData = event.data;
-  
-    if (messageData.startsWith("@")) {
-      const splitData = messageData.split(" ");
-      tags = parseTags(splitData[0].substring(1));
-      messageData = splitData.slice(1).join(" ");
-    }
-  
-    // Extract common parts
-    const regex = /:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #(\w+) :(.*)/;
-    const match = messageData.match(regex);
-    if (!match) return;
-  
-    const displayName = tags["display-name"] || match[1];
-    const channelName = match[2];
-    const rawMessage = match[3].trim();
-    const userColor = (tags["color"] && tags["color"].trim() !== "") ? tags["color"] : "#ffffff";
-    // Create a timestamp element
-    // Optionally style it in your CSS (e.g., smaller, gray font)
-    // Then prepend it to your message element:
-  
-    const timestampElem = document.createElement("span");
-    timestampElem.className = "timestamp";
-    timestampElem.textContent = `[${new Date().toLocaleTimeString()}] `;
-  
-    // Build the message element
-    const usernameElem = document.createElement("span");
-    usernameElem.className = "username";
-    usernameElem.textContent = displayName + ": ";
-    usernameElem.style.color = userColor;
-  
-    const badgesStr = tags["badges"] || "";
-    const badgeImages = createBadgeImages(badgesStr, badges);
-  
-    const messageFragment = parseEmotesInText(rawMessage, emotes);
-  
-    const messageElem = document.createElement("div");
-    messageElem.className = "chat-message";
-    badgeImages.forEach(img => messageElem.appendChild(img));
-    messageElem.appendChild(timestampElem);
-    messageElem.appendChild(usernameElem);
-    messageElem.appendChild(messageFragment);
-  
-    chatWindow.appendChild(messageElem);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-  
-    // --- Command Checks ---
-    // Check for !honk command
-    if (rawMessage === "!honk") {
-      if (socket.readyState === WebSocket.OPEN) {
-        console.log(`Responding with honk in #${channelName}`);
-        socket.send(`PRIVMSG #${channelName} :honk\r\n`);
-      }
-    }
-  };
-  
-  socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
-  socket.onclose = () => console.log(`🔌 Disconnected from #${channel}`);
-  return socket;
-  
+  if (event.data.startsWith("PING")) {
+    socket.send("PONG :tmi.twitch.tv\r\n");
+    return;
   }
 
+  if (event.data.includes('NOTICE * :Login authentication failed')) {
+    console.error('Authentication failed: Invalid OAuth token or username.');
+    alert('Authentication failed: Invalid OAuth token or username.');
+    socket.close();
+    return;
+  }
+
+  if (event.data.includes('NOTICE') && event.data.includes('Improperly formatted auth')) {
+    console.error('Improperly formatted auth');
+    alert('Improperly formatted auth');
+    socket.close();
+    return;
+  }
+
+  let tags = {};
+  let messageData = event.data;
+
+  if (messageData.startsWith("@")) {
+    const splitData = messageData.split(" ");
+    tags = parseTags(splitData[0].substring(1));
+    messageData = splitData.slice(1).join(" ");
+  }
+
+  // Extract common parts
+  const regex = /:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #(\w+) :(.*)/;
+  const match = messageData.match(regex);
+  if (!match) return;
+
+  const displayName = tags["display-name"] || match[1];
+  const channelName = match[2];
+  const rawMessage = match[3].trim();
+  const userColor = (tags["color"] && tags["color"].trim() !== "") ? tags["color"] : "#ffffff";
+
+  // Check if the message contains "A", "B", "C", "D", "1", "2", "3", or "4"
+  const answer = rawMessage.toUpperCase().trim(); // Normalize to upper case
+  if (["A", "B", "C", "D", "1", "2", "3", "4"].includes(answer)) {
+    console.log(`${displayName} answered: ${answer}`);
+    document.getElementById(`tally-${rawMessage}`).textContent = chatAnswers[rawMessage];
+
+    window.dispatchEvent(new CustomEvent("PlayerAnswered", { 
+      detail: { 
+        username: displayName, 
+        answer: answer 
+      }
+    }));
+
+    stopTimer(); // Stop the timer when an answer is received
+    showAnswerResults(); // Show the results
+  }
+
+  // Existing chat display logic
+  const timestampElem = document.createElement("span");
+  timestampElem.className = "timestamp";
+  timestampElem.textContent = `[${new Date().toLocaleTimeString()}] `;
+
+  const usernameElem = document.createElement("span");
+  usernameElem.className = "username";
+  usernameElem.textContent = displayName + ": ";
+  usernameElem.style.color = userColor;
+
+  const badgesStr = tags["badges"] || "";
+  const badgeImages = createBadgeImages(badgesStr, badges);
+
+  const messageFragment = parseEmotesInText(rawMessage, emotes);
+
+  const messageElem = document.createElement("div");
+  messageElem.className = "chat-message";
+  badgeImages.forEach(img => messageElem.appendChild(img));
+  messageElem.appendChild(timestampElem);
+  messageElem.appendChild(usernameElem);
+  messageElem.appendChild(messageFragment);
+
+  chatWindow.appendChild(messageElem);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+
+  // Command Checks:
+  // --- Game-related Commands ---
+  if (rawMessage.toLowerCase() === "!startgame") {
+    // Start the game
+    if (socket.readyState === WebSocket.OPEN) {
+      console.log(`Starting the game in #${channelName}`);
+      socket.send(`PRIVMSG #${channelName} :The game is starting! Type !join to join!`);
+      startGame(); // Call function to start the game (see below)
+    }
+  }
+
+  if (rawMessage.toLowerCase() === "!join") {
+    // Join the game
+    window.dispatchEvent(new CustomEvent("PlayerJoined", { detail: { username: displayName } }));
+    socket.send(`PRIVMSG #${channelName} :${displayName} has joined the game!`);
+  }
+
+  // --- Trivia Answering ---
+  const options = document.querySelectorAll(".option-btn");
+  options.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const answer = e.target.textContent;
+      window.dispatchEvent(new CustomEvent("PlayerAnswered", { detail: { username: displayName, answer } }));
+    });
+  });
+
+  // --- Command to Respond with "honk" ---
+  if (rawMessage === "!honk") {
+    if (socket.readyState === WebSocket.OPEN) {
+      console.log(`Responding with honk in #${channelName}`);
+      socket.send(`PRIVMSG #${channelName} :honk\r\n`);
+    }
+  }
+};
+
+// Error handling for WebSocket
+socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
+socket.onclose = () => console.log(`🔌 Disconnected from #${channel}`);
+return socket;
+}
