@@ -209,14 +209,18 @@ function captureChatterAnswer(username, answer) {
 }
 
 // Example of chat input listener for capturing answers
-// Fix: Add fallback for missing `chatInput` element
-document.querySelector("#chatInput")?.addEventListener("input", (e) => {
-  const answer = e.target.value.toUpperCase(); // Get the answer
-  if (["A", "B", "C", "D"].includes(answer)) {
-    captureChatterAnswer("chatUser", answer); // Example: Capture "chatUser" answer
-  }
-});
-
+// Fix: Add null check for `#chatInput` to avoid TypeError
+const chatInput = document.querySelector("#chatInput");
+if (chatInput) {
+  chatInput.addEventListener("input", (e) => {
+    const answer = e.target.value.toUpperCase(); // Get the answer
+    if (["A", "B", "C", "D"].includes(answer)) {
+      captureChatterAnswer("chatUser", answer); // Example: Capture "chatUser" answer
+    }
+  });
+} else {
+  console.warn("Element with ID 'chatInput' not found in the DOM.");
+}
 
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
