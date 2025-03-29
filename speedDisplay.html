@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cyber Speed & Weather</title>
+  <!-- Include Plotly -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    /* ====== BASE STYLES (DARK MODE BY DEFAULT) ====== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #111;
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto; /* or hidden if you prefer */
+    }
+
+    /* Center the "Connect" button overlay */
+    #connectOverlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0; 
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #111; /* same dark background */
+      z-index: 999; /* on top of everything */
+    }
+
+    #connectBtn {
+      font-size: 1.2rem;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0f0;
+      color: #000;
+      transition: background 0.3s;
+    }
+    #connectBtn:hover {
+      background: #afa;
+    }
+
+    /* Main App Container (initially hidden until connect) */
+    #appContainer {
+      display: none; /* hidden until geolocation starts */
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    header {
+      background: #000;
+      color: #0ff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      position: relative; /* so we can position the Options button on the side */
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    /* Options button in the header (e.g., top-right corner) */
+    #optionsBtn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: 2px solid #0ff;
+      color: #0ff;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #optionsBtn:hover {
+      background: #0ff;
+      color: #000;
+    }
+
+    /* Options Menu (hidden by default) */
+    #optionsMenu {
+      display: none;
+      background: #222;
+      border: 2px solid #0ff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+    }
+    #optionsMenu label {
+      display: block;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+    }
+
+    /* Speed Gauge container */
+    #speedGauge {
+      width: 100%;
+      max-width: 420px;
+      height: 280px;
+      margin: 0 auto 1rem;
+    }
+
+    /* Info and Weather box */
+    .info-row {
+      margin: 1rem 0;
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+    .info-row span.label {
+      font-weight: bold;
+      margin-right: 0.5rem;
+      color: #ccc;
+    }
+
+    .weather-box {
+      background: #222;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+      padding: 1rem;
+      margin: 1rem auto;
+      max-width: 400px;
+      text-align: center;
+    }
+    .weather-box p {
+      margin: 0.5rem 0;
+    }
+    .weather-box span.label {
+      color: #888;
+    }
+
+    /* Light Mode Overrides (if user toggles off dark mode) */
+    body.light-mode {
+      background: #f0f0f0;
+      color: #333;
+    }
+    body.light-mode #connectOverlay {
+      background: #eee;
+    }
+    body.light-mode header {
+      background: #ddd;
+      color: #333;
+    }
+    body.light-mode #optionsBtn {
+      border-color: #333;
+      color: #333;
+    }
+    body.light-mode #optionsBtn:hover {
+      background: #333;
+      color: #fff;
+    }
+    body.light-mode .weather-box {
+      background: #fff;
+      box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <!-- CONNECT OVERLAY -->
+  <div id="connectOverlay">
+    <button id="connectBtn">Connect</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="appContainer">
+    <header>
+      <h1>Cyber Speed &amp; Weather</h1>
+      <button id="optionsBtn">Options</button>
+    </header>
+
+    <!-- OPTIONS MENU (hidden by default) -->
+    <div id="optionsMenu">
+      <label>
+        <input type="checkbox" id="darkModeToggle" checked />
+        Dark Mode
+      </label>
+      <!-- Add more toggles or options here -->
+    </div>
+
+    <!-- Speed Gauge -->
+    <div id="speedGauge"></div>
+
+    <!-- Info displays -->
+    <div class="info-row">
+      <div><span class="label">Time:</span> <span id="timeDisplay">--:--:-- --</span></div>
+      <div><span class="label">Latitude:</span> <span id="latDisplay">--</span></div>
+      <div><span class="label">Longitude:</span> <span id="lonDisplay">--</span></div>
+    </div>
+
+    <!-- Weather box -->
+    <div class="weather-box">
+      <p><span class="label">Weather:</span> <span id="weatherDesc">N/A</span></p>
+      <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°C</p>
+    </div>
+  </div>
+
+  <script>
+    /***************************************************************
+     * GAUGE SETUP
+     ***************************************************************/
+    let gaugeChart = null;
+    let gaugeData = null;
+    let gaugeLayout = null;
+
+    function createGauge(initialValue = 0) {
+      gaugeData = [
+        {
+          type: "indicator",
+          mode: "gauge+number",
+          value: initialValue,
+          title: {
+            text: "Speed (m/s)",
+            font: { size: 18 }
+          },
+          number: {
+            font: { size: 32 }
+          },
+          gauge: {
+            axis: {
+              range: [0, 30],
+              tickwidth: 2,
+              tickcolor: "#0ff"
+            },
+            bar: {
+              color: "#0f0",
+              thickness: 0.3
+            },
+            borderwidth: 2,
+            bordercolor: "#0ff",
+            steps: [
+              { range: [0, 10], color: "#034" },
+              { range: [10, 20], color: "#067" },
+              { range: [20, 30], color: "#0a0" }
+            ]
+          }
+        }
+      ];
+
+      gaugeLayout = {
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        margin: { t: 0, b: 0, l: 0, r: 0 }
+      };
+
+      const config = {
+        displayModeBar: false,
+        displaylogo: false
+      };
+
+      Plotly.newPlot("speedGauge", gaugeData, gaugeLayout, config).then((chart) => {
+        gaugeChart = chart;
+      });
+    }
+
+    function updateGauge(newSpeed) {
+      if (!gaugeChart) return;
+      Plotly.update("speedGauge", { value: [newSpeed] }, {}, [0]);
+    }
+
+    /***************************************************************
+     * TIME & LOCATION
+     ***************************************************************/
+    function updateTimeDisplay() {
+      const timeEl = document.getElementById("timeDisplay");
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      let seconds = now.getSeconds();
+
+      // Convert to 12-hour
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      if (hours === 0) {
+        hours = 12;
+      }
+
+      const h = String(hours).padStart(2, "0");
+      const m = String(minutes).padStart(2, "0");
+      const s = String(seconds).padStart(2, "0");
+
+      timeEl.textContent = `${h}:${m}:${s} ${ampm}`;
+    }
+    setInterval(updateTimeDisplay, 1000);
+
+    let lastPosition = null;
+    function handlePosition(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const speed = pos.coords.speed; // in m/s (can be null)
+
+      document.getElementById("latDisplay").textContent = lat.toFixed(5);
+      document.getElementById("lonDisplay").textContent = lon.toFixed(5);
+
+      if (speed !== null && !isNaN(speed)) {
+        updateGauge(speed);
+      } else {
+        updateGauge(0);
+      }
+
+      // If we moved significantly, fetch new weather
+      if (!lastPosition || distanceBetween(lastPosition, pos.coords) > 0.01) {
+        fetchWeather(lat, lon);
+      }
+
+      lastPosition = pos.coords;
+    }
+
+    function handleError(err) {
+      console.warn(`ERROR(${err.code}): ${err.message}`);
+    }
+
+    // Haversine formula for distance (km)
+    function distanceBetween(coordsA, coordsB) {
+      const R = 6371;
+      const dLat = toRad(coordsB.latitude - coordsA.latitude);
+      const dLon = toRad(coordsB.longitude - coordsA.longitude);
+      const lat1 = toRad(coordsA.latitude);
+      const lat2 = toRad(coordsB.latitude);
+
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function toRad(value) {
+      return (value * Math.PI) / 180;
+    }
+
+    /***************************************************************
+     * WEATHER FETCH
+     ***************************************************************/
+    async function fetchWeather(lat, lon) {
+      const apiKey = "2c523879d607be23b14fabb202cce5bc"; // Replace
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("Weather API response was not OK.");
+        }
+        const data = await response.json();
+        const description = data.weather[0].description;
+        const temp = data.main.temp;
+
+        document.getElementById("weatherDesc").textContent = description;
+        document.getElementById("weatherTemp").textContent = temp.toFixed(1);
+      } catch (err) {
+        console.error("Error fetching weather:", err);
+        document.getElementById("weatherDesc").textContent = "N/A";
+        document.getElementById("weatherTemp").textContent = "--";
+      }
+    }
+
+    /***************************************************************
+     * DARK MODE TOGGLE & OPTIONS MENU
+     ***************************************************************/
+    const optionsBtn = document.getElementById("optionsBtn");
+    const optionsMenu = document.getElementById("optionsMenu");
+    const darkModeToggle = document.getElementById("darkModeToggle");
+
+    // Show/hide the options menu
+    optionsBtn.addEventListener("click", () => {
+      if (optionsMenu.style.display === "none" || !optionsMenu.style.display) {
+        optionsMenu.style.display = "block";
+      } else {
+        optionsMenu.style.display = "none";
+      }
+    });
+
+    // By default, we start in dark mode
+    // If user unchecks the box, switch to "light-mode"
+    darkModeToggle.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        document.body.classList.remove("light-mode");
+      } else {
+        document.body.classList.add("light-mode");
+      }
+    });
+
+    /***************************************************************
+     * CONNECT BUTTON LOGIC
+     ***************************************************************/
+    const connectOverlay = document.getElementById("connectOverlay");
+    const connectBtn = document.getElementById("connectBtn");
+    const appContainer = document.getElementById("appContainer");
+
+    connectBtn.addEventListener("click", () => {
+      // Hide the overlay, show the main app container
+      connectOverlay.style.display = "none";
+      appContainer.style.display = "block";
+
+      // Create the gauge
+      createGauge(0);
+      updateTimeDisplay(); // Initialize the clock once
+
+      // Start geolocation
+      if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(handlePosition, handleError, {
+          enableHighAccuracy: true
+        });
+      } else {
+        alert("Geolocation is not supported by your browser!");
+      }
+    });
+  </script>
+</body>
+</html>

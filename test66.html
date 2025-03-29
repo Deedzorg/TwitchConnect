@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>System Audio - Voice-Activated Recorder</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin-right: 1rem;
+      cursor: pointer;
+    }
+    .clips-container {
+      margin-top: 1rem;
+    }
+    .clip {
+      margin: 0.5rem 0;
+      background: #f9f9f9;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+    }
+    .clip-title {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .log {
+      margin-top: 1rem;
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      height: 150px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>System Audio - Voice-Activated Recorder (Demo)</h1>
+  <button id="startBtn">Start Capturing</button>
+  <button id="stopBtn" disabled>Stop Capturing</button>
+  
+  <div class="clips-container" id="clipsContainer"></div>
+  <div class="log" id="log"></div>
+
+  <script>
+    // -------------------------------------------------------------------------
+    // Configurable constants
+    // -------------------------------------------------------------------------
+    const SILENCE_THRESHOLD = 0.01;  // volume below this is considered "silence"
+    const SILENCE_DURATION  = 1000;  // how long (ms) we wait in silence before we stop a recording
+
+    // -------------------------------------------------------------------------
+    // Elements
+    // -------------------------------------------------------------------------
+    const startBtn      = document.getElementById('startBtn');
+    const stopBtn       = document.getElementById('stopBtn');
+    const logEl         = document.getElementById('log');
+    const clipsContainer= document.getElementById('clipsContainer');
+
+    // -------------------------------------------------------------------------
+    // State
+    // -------------------------------------------------------------------------
+    let displayStream    = null;     // system audio stream via getDisplayMedia
+    let audioContext     = null;     // Web Audio context
+    let analyserNode     = null;     // to monitor volume
+    let dataArray        = null;     // array for volume analysis
+    let isCapturing      = false;    // are we capturing system audio?
+
+    // Voice activity detection (VAD) state
+    let isSpeaking       = false;    // is the audio above threshold?
+    let silenceStartTime = 0;        // when we last detected silence
+    let mediaRecorder    = null;     // current MediaRecorder for a "speech segment"
+    let audioChunks      = [];       // current chunk data
+
+    // -------------------------------------------------------------------------
+    // Utility: log messages
+    // -------------------------------------------------------------------------
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // -------------------------------------------------------------------------
+    // Mock STT function (placeholder). Real-world: integrate Vosk or cloud API.
+    // -------------------------------------------------------------------------
+    async function mockSTTFromAudioBlob(blob) {
+      // This is where you'd do real speech-to-text:
+      // - Send `blob` to your server or a cloud STT
+      // - Or run Vosk / pocketsphinx in-browser
+      // Return the recognized text (or a guess).
+      await new Promise((resolve) => setTimeout(resolve, 500)); // fake delay
+      return "Detected_Speech"; 
+    }
+
+    // -------------------------------------------------------------------------
+    // Start capturing system audio
+    // -------------------------------------------------------------------------
+    async function startCapturing() {
+      try {
+        // Request screen share with audio
+        displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+
+        const audioTracks = displayStream.getAudioTracks();
+        if (!audioTracks || audioTracks.length === 0) {
+          log("No audio track found on the shared stream!");
+          return;
+        }
+
+        // We won't show the video, but we do need the audio track
+        audioContext = new AudioContext();
+        const sourceNode = audioContext.createMediaStreamSource(displayStream);
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 1024; // smaller FFT for quicker volume checks
+        sourceNode.connect(analyserNode);
+
+        dataArray = new Uint8Array(analyserNode.fftSize);
+
+        isCapturing = true;
+        log("System audio capture started. Speak or play something...");
+        monitorVolume(); // start checking volume in a loop
+
+      } catch (err) {
+        log("Error starting capture: " + err);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Stop capturing system audio
+    // -------------------------------------------------------------------------
+    function stopCapturing() {
+      isCapturing = false;
+
+      // Stop any active recorder segment
+      stopSegment();
+
+      // Close streams
+      if (displayStream) {
+        displayStream.getTracks().forEach(track => track.stop());
+      }
+      displayStream = null;
+
+      // Close audio context
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      log("System audio capture stopped.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Start a new segment / chunk (MediaRecorder) for a speech portion
+    // -------------------------------------------------------------------------
+    function startSegment() {
+      if (!displayStream) return;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        // If there's already a mediaRecorder running, do nothing
+        return;
+      }
+
+      // We want to start a brand-new MediaRecorder to capture each segment
+      mediaRecorder = new MediaRecorder(displayStream, { mimeType: 'audio/webm' });
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // We have a complete chunk for that speech segment
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        
+        // 1) Perform STT (fake or real) on the chunk
+        const recognizedText = await mockSTTFromAudioBlob(blob);
+        
+        // 2) Generate a playback element on the page
+        addAudioClip(blob, recognizedText);
+      };
+
+      mediaRecorder.start();
+      log("MediaRecorder started for a new speech segment.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Stop the current segment (if recording)
+    // -------------------------------------------------------------------------
+    function stopSegment() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        log("MediaRecorder stopped for segment.");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Volume monitoring loop (rudimentary voice-activity detection)
+    // -------------------------------------------------------------------------
+    function monitorVolume() {
+      if (!isCapturing || !analyserNode) return;
+
+      analyserNode.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS to measure "volume"
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const val = (dataArray[i] - 128) / 128;
+        sum += val * val;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+
+      // Check threshold
+      if (rms > SILENCE_THRESHOLD) {
+        // We consider this "speaking"
+        if (!isSpeaking) {
+          isSpeaking = true;
+          startSegment(); // begin a new recording chunk
+        }
+        silenceStartTime = 0;
+      } else {
+        // We consider this "silence"
+        if (isSpeaking) {
+          // If we just left speech, mark the time
+          if (silenceStartTime === 0) {
+            silenceStartTime = performance.now();
+          }
+          // If we've been silent long enough, stop the segment
+          if (performance.now() - silenceStartTime > SILENCE_DURATION) {
+            isSpeaking = false;
+            stopSegment();
+          }
+        }
+      }
+
+      requestAnimationFrame(monitorVolume);
+    }
+
+    // -------------------------------------------------------------------------
+    // Add an audio element + label to the page for a completed clip
+    // -------------------------------------------------------------------------
+    function addAudioClip(blob, recognizedText) {
+      const clipEl = document.createElement('div');
+      clipEl.className = 'clip';
+
+      // Title text
+      const clipTitle = document.createElement('div');
+      clipTitle.className = 'clip-title';
+      const safeText = recognizedText.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+      clipTitle.textContent = safeText || "untitled_clip";
+
+      // Audio element
+      const audioEl = document.createElement('audio');
+      audioEl.controls = true;
+      const blobUrl = URL.createObjectURL(blob);
+      audioEl.src = blobUrl;
+
+      // Download link (optional)
+      const downloadLink = document.createElement('a');
+      downloadLink.href = blobUrl;
+      downloadLink.download = (safeText || "clip") + ".webm";
+      downloadLink.textContent = "Download";
+
+      clipEl.appendChild(clipTitle);
+      clipEl.appendChild(audioEl);
+      clipEl.appendChild(document.createTextNode(" "));
+      clipEl.appendChild(downloadLink);
+
+      clipsContainer.appendChild(clipEl);
+    }
+
+    // -------------------------------------------------------------------------
+    // Button handlers
+    // -------------------------------------------------------------------------
+    startBtn.onclick = () => {
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      startCapturing();
+    };
+
+    stopBtn.onclick = () => {
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      stopCapturing();
+    };
+  </script>
+</body>
+</html>

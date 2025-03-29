@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>System Audio - Voice-Activated Recorder</title>
+  <style>
+    /* Basic styling for demonstration */
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      background: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    .controls {
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin-right: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: #fff;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: default;
+    }
+    .record-indicator {
+      color: red;
+      font-weight: bold;
+      margin-left: 1rem;
+    }
+    .hidden {
+      display: none;
+    }
+    #statusLog {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      height: 6rem;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+    .clips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .clip {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 4px;
+      flex: 1 1 280px;
+      max-width: 400px;
+    }
+    .clip-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .download-link {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.3rem 0.6rem;
+      background: #28a745;
+      color: #fff;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>System Audio - Voice-Activated Recorder (Demo)</h1>
+  
+  <div class="controls">
+    <button id="startBtn">Start Capture</button>
+    <button id="stopBtn" disabled>Stop Capture</button>
+    <span id="recordIndicator" class="record-indicator hidden">● Recording</span>
+  </div>
+
+  <div id="statusLog"></div>
+  <div class="clips-container" id="clipsContainer"></div>
+
+  <script>
+    // ------------------------------------------
+    // CONFIG
+    // ------------------------------------------
+    const VAD_SILENCE_THRESHOLD = 0.01; // RMS amplitude threshold
+    const VAD_SILENCE_DELAY     = 700;  // how long (ms) of silence before we stop
+    const CHECK_INTERVAL        = 100;  // how often (ms) we check amplitude
+
+    // ------------------------------------------
+    // DOM Elements
+    // ------------------------------------------
+    const startBtn        = document.getElementById('startBtn');
+    const stopBtn         = document.getElementById('stopBtn');
+    const recordIndicator = document.getElementById('recordIndicator');
+    const statusLog       = document.getElementById('statusLog');
+    const clipsContainer  = document.getElementById('clipsContainer');
+
+    // ------------------------------------------
+    // State Variables
+    // ------------------------------------------
+    let displayStream    = null; 
+    let audioContext     = null;
+    let analyserNode     = null;
+    let dataArray        = null;
+    let animationId      = null; // for requestAnimationFrame
+
+    let isCapturing      = false;
+    let isSpeaking       = false; 
+    let silenceStart     = 0;
+    let mediaRecorder    = null;
+    let currentChunks    = [];
+
+    // Let’s store the chosen MIME type so we can use it for extension
+    let chosenMime       = '';
+    // A simple ID for each clip
+    let clipCounter = 0;
+
+    // ------------------------------------------
+    // Logging Helper
+    // ------------------------------------------
+    function log(msg) {
+      statusLog.textContent += msg + "\n";
+      statusLog.scrollTop = statusLog.scrollHeight;
+    }
+
+    // ------------------------------------------
+    // Mock STT function (placeholder)
+    // ------------------------------------------
+    async function transcribeAudio(blob) {
+      // Simulate 300ms "transcription" time
+      await new Promise(r => setTimeout(r, 300));
+      return "Detected Speech";
+    }
+
+    // ------------------------------------------
+    // Start System Audio Capture
+    // ------------------------------------------
+    async function startCapture() {
+      try {
+        // MUST be in a secure context (https or localhost)
+        // to use getDisplayMedia with audio
+        displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+
+        // Check if we actually have an audio track
+        const audioTracks = displayStream.getAudioTracks();
+        console.log("Audio tracks =>", audioTracks);
+
+        if (!audioTracks || audioTracks.length === 0) {
+          log("No audio track found. Please ensure you selected a source with audio and 'Share audio' is checked.");
+          return;
+        }
+
+        // Create Web Audio context + analyser to do naive VAD
+        audioContext = new AudioContext();
+        const sourceNode = audioContext.createMediaStreamSource(displayStream);
+
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 1024;
+        sourceNode.connect(analyserNode);
+
+        dataArray = new Uint8Array(analyserNode.fftSize);
+
+        isCapturing = true;
+        silenceStart = 0;
+        log("Capture started. Listening for speech...");
+
+        recordIndicator.classList.add('hidden');
+        checkVolume(); // Start checking volume in real-time
+      } catch (err) {
+        log("Error starting capture: " + err);
+        console.error(err);
+      }
+    }
+
+    // ------------------------------------------
+    // Stop System Audio Capture
+    // ------------------------------------------
+    function stopCapture() {
+      isCapturing = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      // If currently recording a segment, stop it
+      stopSegment();
+
+      // Stop all tracks
+      if (displayStream) {
+        displayStream.getTracks().forEach(t => t.stop());
+      }
+      displayStream = null;
+
+      // Close audio context
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      recordIndicator.classList.add('hidden');
+      log("Capture stopped.");
+    }
+
+    // ------------------------------------------
+    // Start a new speech segment recording
+    // ------------------------------------------
+    function startSegment() {
+      if (!displayStream) return;
+
+      // If we are already recording, don't start again
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        return;
+      }
+
+      // Pick a supported MIME type
+      chosenMime = '';
+      if (MediaRecorder.isTypeSupported('audio/mp4; codecs=aac')) {
+        chosenMime = 'audio/mp4; codecs=aac';  // Safari, etc.
+      } else if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
+        chosenMime = 'audio/webm; codecs=opus'; // Chrome/Firefox
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        chosenMime = 'audio/webm';
+      } else {
+        // If none are supported, we can't record
+        alert('No supported audio format found in this browser.');
+        return;
+      }
+
+      try {
+        mediaRecorder = new MediaRecorder(displayStream, { mimeType: chosenMime });
+      } catch (e) {
+        console.error('MediaRecorder creation failed:', e);
+        log('MediaRecorder creation failed: ' + e.message);
+        return;
+      }
+
+      currentChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          currentChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(currentChunks, { type: mediaRecorder.mimeType });
+        const recognizedText = await transcribeAudio(blob);
+        addClipToUI(blob, recognizedText, mediaRecorder.mimeType);
+      };
+
+      mediaRecorder.start();
+      recordIndicator.classList.remove('hidden');
+      log("Recording segment started with MIME: " + chosenMime);
+    }
+
+    // ------------------------------------------
+    // Stop the current speech segment
+    // ------------------------------------------
+    function stopSegment() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        recordIndicator.classList.add('hidden');
+        log("Recording segment stopped.");
+      }
+    }
+
+    // ------------------------------------------
+    // Check Volume (Naive VAD)
+    // ------------------------------------------
+    function checkVolume() {
+      if (!isCapturing || !analyserNode) return;
+
+      analyserNode.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS amplitude
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const val = (dataArray[i] - 128) / 128;
+        sum += val * val;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+
+      // If volume is above threshold, treat as speech
+      if (rms > VAD_SILENCE_THRESHOLD) {
+        if (!isSpeaking) {
+          isSpeaking = true;
+          startSegment();
+        }
+        silenceStart = 0;
+      } else {
+        // Silence
+        if (isSpeaking) {
+          if (silenceStart === 0) {
+            silenceStart = performance.now();
+          } else {
+            const elapsed = performance.now() - silenceStart;
+            if (elapsed > VAD_SILENCE_DELAY) {
+              isSpeaking = false;
+              stopSegment();
+            }
+          }
+        }
+      }
+
+      animationId = requestAnimationFrame(checkVolume);
+    }
+
+    // ------------------------------------------
+    // Add clip to UI with recognized text
+    // ------------------------------------------
+    function addClipToUI(blob, recognizedText, mimeType) {
+      clipCounter++;
+      const clipEl = document.createElement('div');
+      clipEl.className = 'clip';
+
+      // Clean up recognized text for filename
+      let safeText = recognizedText.replace(/[^\w\s-]/g, '').trim();
+      if (safeText.length === 0) {
+        safeText = "untitled_clip_" + clipCounter;
+      }
+
+      const clipTitle = document.createElement('div');
+      clipTitle.className = 'clip-title';
+      clipTitle.textContent = safeText;
+
+      const audioEl = document.createElement('audio');
+      audioEl.controls = true;
+      const blobUrl = URL.createObjectURL(blob);
+      audioEl.src = blobUrl;
+
+      // Match extension to our chosen MIME
+      let extension = '.webm';
+      if (mimeType.includes('mp4') || mimeType.includes('aac')) {
+        extension = '.m4a';
+      }
+
+      const downloadLink = document.createElement('a');
+      downloadLink.className = 'download-link';
+      downloadLink.href = blobUrl;
+      downloadLink.download = safeText + extension; 
+      downloadLink.textContent = 'Download';
+
+      clipEl.appendChild(clipTitle);
+      clipEl.appendChild(audioEl);
+      clipEl.appendChild(document.createElement('br'));
+      clipEl.appendChild(downloadLink);
+
+      clipsContainer.appendChild(clipEl);
+    }
+
+    // ------------------------------------------
+    // Wire up buttons
+    // ------------------------------------------
+    startBtn.addEventListener('click', () => {
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      startCapture();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      stopCapture();
+    });
+  </script>
+</body>
+</html>
