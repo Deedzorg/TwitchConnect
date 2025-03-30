@@ -1,0 +1,207 @@
+/* ====== BASE STYLES (Dark Mode by Default) ====== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: #111;
+  color: #eee;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Connect Overlay */
+#connectOverlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  z-index: 999;
+}
+#connectBtn {
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #0f0;
+  color: #000;
+  transition: background 0.3s;
+}
+#connectBtn:hover {
+  background: #afa;
+}
+
+/* Main App Container (hidden until connect) */
+#appContainer {
+  display: none; /* hidden until geolocation starts */
+  width: 100%;
+  max-width: 750px;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+header {
+  background: #000;
+  color: #0ff;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+/* Options button in the header */
+#optionsBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 2px solid #0ff;
+  color: #0ff;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+#optionsBtn:hover {
+  background: #0ff;
+  color: #000;
+}
+
+/* Options Menu (hidden by default) */
+#optionsMenu {
+  display: none;
+  background: #222;
+  border: 2px solid #0ff;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+}
+#optionsMenu label {
+  display: block;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+/* Single Gauge Box */
+.gauge-box {
+  background: #222;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 300px;
+  margin: 0 auto 1rem;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+.gauge-box h2 {
+  margin-bottom: 0.5rem;
+}
+#speedGauge {
+  width: 100%;
+  height: 250px;
+}
+
+/* Info row for lat/lon/time, etc. */
+.info-row {
+  margin: 1rem 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+.info-row span.label {
+  font-weight: bold;
+  color: #ccc;
+}
+
+/* Stats row for heading, distance, max speed, avg speed */
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin: 1rem 0;
+}
+.stats-row div {
+  font-size: 1.1rem;
+}
+.stats-row span.label {
+  color: #ccc;
+  font-weight: bold;
+}
+
+/* Weather box */
+.weather-box {
+  background: #222;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+  padding: 1rem;
+  margin: 1rem auto;
+  max-width: 400px;
+  text-align: center;
+}
+.weather-box p {
+  margin: 0.5rem 0;
+}
+.weather-box span.label {
+  color: #888;
+}
+
+/* Map */
+#map {
+  width: 100%;
+  height: 300px;
+  margin: 1rem auto;
+  border: 2px solid #0ff;
+  border-radius: 8px;
+  max-width: 700px;
+}
+
+/* Speed Over Time Chart */
+#speedChart {
+  width: 100%;
+  height: 300px;
+  margin: 1rem auto;
+  max-width: 700px;
+}
+
+/* Light Mode Overrides */
+body.light-mode {
+  background: #f0f0f0;
+  color: #333;
+}
+body.light-mode #connectOverlay {
+  background: #eee;
+}
+body.light-mode header {
+  background: #ddd;
+  color: #333;
+}
+body.light-mode #optionsBtn {
+  border-color: #333;
+  color: #333;
+}
+body.light-mode #optionsBtn:hover {
+  background: #333;
+  color: #fff;
+}
+body.light-mode .weather-box,
+body.light-mode .gauge-box {
+  background: #fff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}

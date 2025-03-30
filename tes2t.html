@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modular Speed &amp; Heading Gauges</title>
+
+  <!-- Plotly (for Speed & Heading Gauges) -->
+  <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+
+  <!-- Leaflet (for Map) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+
+  <style>
+    /* ===== BASE STYLES (Dark Mode by Default) ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #111;
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Connect Overlay */
+    #connectOverlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #111;
+      z-index: 999;
+    }
+    #connectBtn {
+      font-size: 1.2rem;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0f0;
+      color: #000;
+      transition: background 0.3s;
+    }
+    #connectBtn:hover {
+      background: #afa;
+    }
+
+    /* Main App Container */
+    #appContainer {
+      display: none; /* hidden until geolocation starts */
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+      text-align: center;
+    }
+    header {
+      background: #000;
+      color: #0ff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    #optionsBtn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: 2px solid #0ff;
+      color: #0ff;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #optionsBtn:hover {
+      background: #0ff;
+      color: #000;
+    }
+
+    /* Options Menu (hidden by default) */
+    #optionsMenu {
+      display: none;
+      background: #222;
+      border: 2px solid #0ff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      text-align: left;
+    }
+    #optionsMenu label {
+      display: block;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    /* Info row */
+    .info-row {
+      margin: 1rem 0;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .info-row .label {
+      font-weight: bold;
+      color: #ccc;
+      margin-right: 0.3rem;
+    }
+
+    /* Weather box */
+    .weather-box {
+      background: #222;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+      padding: 1rem;
+      margin: 1rem auto;
+      max-width: 400px;
+      text-align: center;
+    }
+    .weather-box p {
+      margin: 0.5rem 0;
+    }
+    .weather-box .label {
+      color: #888;
+    }
+
+    /* Feature Containers */
+    .feature-container {
+      margin: 1rem auto;
+      display: block;
+    }
+
+    /* Speed Gauge Container */
+    #speedGaugeContainer {
+      background: #222;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 0 8px rgba(255,255,255,0.2);
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem auto;
+    }
+    #speedGauge {
+      width: 100%;
+      height: 300px;
+    }
+
+    /* Heading Gauge Container */
+    #headingGaugeContainer {
+      background: #222;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 0 8px rgba(255,255,255,0.2);
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem auto;
+      display: none; /* default hidden, toggled by user */
+    }
+    #headingGauge {
+      width: 100%;
+      height: 300px;
+    }
+
+    /* Heading Tape Container */
+    #headingTapeContainer {
+      background: #222;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(255,255,255,0.2);
+      width: 360px;
+      height: 60px;
+      margin: 1rem auto;
+      position: relative;
+      overflow: hidden;
+      display: none; /* toggled by user */
+    }
+    #headingTapeWindow {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+    #headingTape {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 60px;
+      width: 2000px; /* Enough width to scroll left/right */
+      background: repeating-linear-gradient(
+        to right,
+        #333 0px,
+        #333 9px,
+        #0ff 10px,
+        #333 11px,
+        #333 19px,
+        #0ff 20px,
+        #333 21px,
+        #333 29px,
+        #0ff 30px
+      );
+    }
+    .tape-marker {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 60px;
+      width: 2px;
+      background: #f00;
+    }
+
+    /* Map Container */
+    #mapContainer {
+      margin: 1rem auto;
+      width: 100%;
+      max-width: 700px;
+      display: none; /* toggled by user */
+    }
+    #map {
+      width: 100%;
+      height: 400px;
+      border: 2px solid #0ff;
+      border-radius: 8px;
+    }
+
+    /* Light Mode Overrides */
+    body.light-mode {
+      background: #f0f0f0;
+      color: #333;
+    }
+    body.light-mode #connectOverlay {
+      background: #eee;
+    }
+    body.light-mode header {
+      background: #ddd;
+      color: #333;
+    }
+    body.light-mode #optionsBtn {
+      border-color: #333;
+      color: #333;
+    }
+    body.light-mode #optionsBtn:hover {
+      background: #333;
+      color: #fff;
+    }
+    body.light-mode .weather-box,
+    body.light-mode .feature-container {
+      background: #fff;
+      color: #333;
+      box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    }
+    body.light-mode #headingTape {
+      background: repeating-linear-gradient(
+        to right,
+        #ddd 0px,
+        #ddd 9px,
+        #00f 10px,
+        #ddd 11px,
+        #ddd 19px,
+        #00f 20px,
+        #ddd 21px,
+        #ddd 29px,
+        #00f 30px
+      );
+    }
+  </style>
+</head>
+<body>
+  <!-- CONNECT OVERLAY -->
+  <div id="connectOverlay">
+    <button id="connectBtn">Connect</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="appContainer">
+    <header>
+      <h1>Modular Geolocation App</h1>
+      <button id="optionsBtn">Options</button>
+    </header>
+
+    <!-- OPTIONS MENU (TOGGLES) -->
+    <div id="optionsMenu">
+      <label>
+        <input type="checkbox" id="darkModeToggle" checked />
+        Dark Mode
+      </label>
+      <label>
+        <input type="checkbox" id="speedGaugeToggle" checked />
+        Show Speed Gauge
+      </label>
+      <label>
+        <input type="checkbox" id="headingGaugeToggle" />
+        Show Heading Gauge
+      </label>
+      <label>
+        <input type="checkbox" id="headingTapeToggle" />
+        Show Heading Tape
+      </label>
+      <label>
+        <input type="checkbox" id="mapToggle" />
+        Show Map
+      </label>
+    </div>
+
+    <!-- Info row (time, lat, lon, altitude) -->
+    <div class="info-row">
+      <div>
+        <span class="label">Time:</span>
+        <span id="timeDisplay">--:--:-- --</span>
+      </div>
+      <div>
+        <span class="label">Latitude:</span>
+        <span id="latDisplay">--</span>
+      </div>
+      <div>
+        <span class="label">Longitude:</span>
+        <span id="lonDisplay">--</span>
+      </div>
+      <div>
+        <span class="label">Altitude (m):</span>
+        <span id="altDisplay">--</span>
+      </div>
+    </div>
+
+    <!-- Weather box -->
+    <div class="weather-box">
+      <p><span class="label">Weather:</span> <span id="weatherDesc">N/A</span></p>
+      <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
+    </div>
+
+    <!-- Speed Gauge -->
+    <div id="speedGaugeContainer" class="feature-container">
+      <h2>Speed (mph)</h2>
+      <div id="speedGauge"></div>
+    </div>
+
+    <!-- Heading Gauge -->
+    <div id="headingGaugeContainer" class="feature-container">
+      <h2>Heading (°)</h2>
+      <div id="headingGauge"></div>
+    </div>
+
+    <!-- Heading Tape -->
+    <div id="headingTapeContainer" class="feature-container">
+      <h2>Aviation-Style Heading Tape</h2>
+      <div id="headingTapeWindow">
+        <div id="headingTape"></div>
+        <div class="tape-marker"></div>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="mapContainer" class="feature-container">
+      <h2>Map</h2>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script>
+    /***************************************************************
+     * GLOBALS
+     ***************************************************************/
+    let speedGaugeChart = null;  // Plotly gauge for speed
+    let headingGaugeChart = null; // Plotly gauge for heading
+    let map = null;              // Leaflet map
+    let mapMarker = null;
+    let lastPosition = null;     // For distance checks if needed
+
+    const HEADING_TAPE_SCALE = 2; // px per degree
+    const headingTape = document.getElementById("headingTape");
+
+    /***************************************************************
+     * CONNECT BUTTON & INIT
+     ***************************************************************/
+    const connectOverlay = document.getElementById("connectOverlay");
+    const connectBtn = document.getElementById("connectBtn");
+    const appContainer = document.getElementById("appContainer");
+
+    connectBtn.addEventListener("click", () => {
+      // Hide the overlay, show the app
+      connectOverlay.style.display = "none";
+      appContainer.style.display = "block";
+
+      // Create both gauges
+      createSpeedGauge(0);
+      createHeadingGauge(0);
+
+      // Initialize map
+      initMap();
+
+      // Start geolocation
+      if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(handlePosition, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 60000
+        });
+      } else {
+        alert("Geolocation not supported by this browser!");
+      }
+
+      // Start clock
+      updateTimeDisplay();
+    });
+
+    /***************************************************************
+     * POSITION UPDATES
+     ***************************************************************/
+    function handlePosition(pos) {
+      const { latitude, longitude, altitude, speed, heading } = pos.coords;
+
+      // Update info row
+      document.getElementById("latDisplay").textContent = latitude.toFixed(5);
+      document.getElementById("lonDisplay").textContent = longitude.toFixed(5);
+      if (altitude !== null && !isNaN(altitude)) {
+        document.getElementById("altDisplay").textContent = altitude.toFixed(1);
+      } else {
+        document.getElementById("altDisplay").textContent = "--";
+      }
+
+      // Speed: convert m/s -> mph
+      let mph = 0;
+      if (speed !== null && !isNaN(speed)) {
+        mph = speed * 2.23694;
+      }
+      updateSpeedGauge(mph);
+
+      // Heading gauge & tape
+      if (heading !== null && !isNaN(heading)) {
+        updateHeadingGauge(heading);
+        updateHeadingTape(heading);
+      } else {
+        updateHeadingGauge(0);
+        updateHeadingTape(0);
+      }
+
+      // Weather fetch if we moved enough
+      if (!lastPosition || distanceBetween(lastPosition, pos.coords) > 0.01) {
+        fetchWeather(latitude, longitude);
+      }
+      lastPosition = pos.coords;
+
+      // Update map
+      updateMap(latitude, longitude);
+    }
+
+    function handleError(err) {
+      console.warn(`ERROR(${err.code}): ${err.message}`);
+    }
+
+    /***************************************************************
+     * TIME
+     ***************************************************************/
+    function updateTimeDisplay() {
+      const timeEl = document.getElementById("timeDisplay");
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      let seconds = now.getSeconds();
+
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      if (hours === 0) hours = 12;
+
+      const hh = String(hours).padStart(2, "0");
+      const mm = String(minutes).padStart(2, "0");
+      const ss = String(seconds).padStart(2, "0");
+
+      timeEl.textContent = `${hh}:${mm}:${ss} ${ampm}`;
+    }
+    setInterval(updateTimeDisplay, 1000);
+
+    /***************************************************************
+     * SPEED GAUGE (Plotly)
+     ***************************************************************/
+    function createSpeedGauge(initialValue) {
+      const data = [
+        {
+          type: "indicator",
+          mode: "gauge+number",
+          value: initialValue,
+          gauge: {
+            axis: { range: [0, 120], tickwidth: 2, tickcolor: "#0ff" },
+            bar: { color: "#0f0", thickness: 0.25 },
+            borderwidth: 2,
+            bordercolor: "#0ff",
+            steps: [
+              { range: [0, 40], color: "#034" },
+              { range: [40, 80], color: "#067" },
+              { range: [80, 120], color: "#0a0" }
+            ]
+          },
+          title: { text: "mph" }
+        }
+      ];
+      const layout = {
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        margin: { t: 50, b: 0, l: 10, r: 10 }
+      };
+      Plotly.newPlot("speedGauge", data, layout, { displayModeBar: false })
+        .then((chart) => {
+          speedGaugeChart = chart;
+        });
+    }
+    function updateSpeedGauge(mph) {
+      if (!speedGaugeChart) return;
+      Plotly.update("speedGauge", { value: [mph] }, {}, [0]);
+    }
+
+    /***************************************************************
+     * HEADING GAUGE (Plotly)
+     ***************************************************************/
+    function createHeadingGauge(initialValue) {
+      const data = [
+        {
+          type: "indicator",
+          mode: "gauge+number",
+          value: initialValue,
+          gauge: {
+            axis: { range: [0, 360], tickwidth: 2, tickcolor: "#0ff" },
+            bar: { color: "#0f0", thickness: 0.25 },
+            borderwidth: 2,
+            bordercolor: "#0ff",
+            steps: [
+              { range: [0, 120], color: "#055" },
+              { range: [120, 240], color: "#077" },
+              { range: [240, 360], color: "#0a0" }
+            ]
+          },
+          title: { text: "Heading (°)" }
+        }
+      ];
+      const layout = {
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        margin: { t: 50, b: 0, l: 10, r: 10 }
+      };
+      Plotly.newPlot("headingGauge", data, layout, { displayModeBar: false })
+        .then((chart) => {
+          headingGaugeChart = chart;
+        });
+    }
+    function updateHeadingGauge(deg) {
+      if (!headingGaugeChart) return;
+      Plotly.update("headingGauge", { value: [deg] }, {}, [0]);
+    }
+
+    /***************************************************************
+     * HEADING TAPE
+     ***************************************************************/
+    function updateHeadingTape(deg) {
+      headingTape.style.transform = `translateX(-${deg * HEADING_TAPE_SCALE}px)`;
+    }
+
+    /***************************************************************
+     * MAP (LEAFLET)
+     ***************************************************************/
+    function initMap() {
+      map = L.map("map").setView([0, 0], 2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+    }
+    function updateMap(lat, lon) {
+      if (!map) return;
+      map.setView([lat, lon], 14);
+      if (!mapMarker) {
+        mapMarker = L.marker([lat, lon]).addTo(map);
+      } else {
+        mapMarker.setLatLng([lat, lon]);
+      }
+    }
+
+    /***************************************************************
+     * WEATHER FETCH
+     ***************************************************************/
+    async function fetchWeather(lat, lon) {
+      // Replace with your real API key
+      const apiKey = "YOUR_OPENWEATHER_API_KEY";
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Weather API response not OK.");
+        const data = await response.json();
+        document.getElementById("weatherDesc").textContent = data.weather[0].description;
+        document.getElementById("weatherTemp").textContent = data.main.temp.toFixed(1);
+      } catch (err) {
+        console.error("Error fetching weather:", err);
+        document.getElementById("weatherDesc").textContent = "N/A";
+        document.getElementById("weatherTemp").textContent = "--";
+      }
+    }
+
+    /***************************************************************
+     * OPTIONS MENU & DARK MODE
+     ***************************************************************/
+    const optionsBtn = document.getElementById("optionsBtn");
+    const optionsMenu = document.getElementById("optionsMenu");
+    const darkModeToggle = document.getElementById("darkModeToggle");
+    const speedGaugeToggle = document.getElementById("speedGaugeToggle");
+    const headingGaugeToggle = document.getElementById("headingGaugeToggle");
+    const headingTapeToggle = document.getElementById("headingTapeToggle");
+    const mapToggle = document.getElementById("mapToggle");
+
+    const speedGaugeContainer = document.getElementById("speedGaugeContainer");
+    const headingGaugeContainer = document.getElementById("headingGaugeContainer");
+    const headingTapeContainer = document.getElementById("headingTapeContainer");
+    const mapContainer = document.getElementById("mapContainer");
+
+    // Toggle Options menu visibility
+    optionsBtn.addEventListener("click", () => {
+      if (!optionsMenu.style.display || optionsMenu.style.display === "none") {
+        optionsMenu.style.display = "block";
+      } else {
+        optionsMenu.style.display = "none";
+      }
+    });
+
+    // Dark / Light Mode
+    darkModeToggle.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        document.body.classList.remove("light-mode");
+      } else {
+        document.body.classList.add("light-mode");
+      }
+    });
+
+    // Speed Gauge Toggle
+    speedGaugeToggle.addEventListener("change", (e) => {
+      speedGaugeContainer.style.display = e.target.checked ? "block" : "none";
+    });
+
+    // Heading Gauge Toggle
+    headingGaugeToggle.addEventListener("change", (e) => {
+      headingGaugeContainer.style.display = e.target.checked ? "block" : "none";
+      if (e.target.checked && headingGaugeChart) {
+        // Re-draw the Plotly gauge if it was previously hidden
+        setTimeout(() => { Plotly.Plots.resize(headingGaugeChart); }, 100);
+      }
+    });
+
+    // Heading Tape Toggle
+    headingTapeToggle.addEventListener("change", (e) => {
+      headingTapeContainer.style.display = e.target.checked ? "block" : "none";
+    });
+
+    // Map Toggle
+    mapToggle.addEventListener("change", (e) => {
+      mapContainer.style.display = e.target.checked ? "block" : "none";
+      if (e.target.checked && map) {
+        setTimeout(() => { map.invalidateSize(); }, 100);
+      }
+    });
+
+    /***************************************************************
+     * DISTANCE HELPER
+     ***************************************************************/
+    function distanceBetween(coordsA, coordsB) {
+      const R = 6371; // Earth radius in km
+      const dLat = toRad(coordsB.latitude - coordsA.latitude);
+      const dLon = toRad(coordsB.longitude - coordsA.longitude);
+      const lat1 = toRad(coordsA.latitude);
+      const lat2 = toRad(coordsB.latitude);
+
+      const a = Math.sin(dLat / 2)*Math.sin(dLat / 2) +
+                Math.cos(lat1)*Math.cos(lat2)*
+                Math.sin(dLon / 2)*Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+  </script>
+</body>
+</html>

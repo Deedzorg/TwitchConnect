@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SpeedMeter Simplified</title>
+
+  <!-- Plotly (for gauge + chart) -->
+  <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+ 
+
+  <!-- Leaflet 1.9.4 with valid SRI attributes -->
+  <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+  
+  <!-- Our custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- CONNECT OVERLAY -->
+  <div id="connectOverlay">
+    <button id="connectBtn">Connect</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="appContainer">
+    <header>
+      <h1>Simplified Speed &amp; Weather</h1>
+      <button id="optionsBtn">Options</button>
+    </header>
+
+    <!-- OPTIONS MENU -->
+    <div id="optionsMenu">
+      <label>
+        <input type="checkbox" id="darkModeToggle" checked />
+        Dark Mode
+      </label>
+    </div>
+
+    <!-- GAUGE -->
+    <div class="gauge-box">
+      <h2>Speed (mph)</h2>
+      <div id="speedGauge"></div>
+    </div>
+
+    <!-- Info displays -->
+    <div class="info-row">
+      <div><span class="label">Time:</span> <span id="timeDisplay">--:--:-- --</span></div>
+      <div><span class="label">Latitude:</span> <span id="latDisplay">--</span></div>
+      <div><span class="label">Longitude:</span> <span id="lonDisplay">--</span></div>
+      <div><span class="label">Accuracy (m):</span> <span id="accuracyDisplay">--</span></div>
+      <div><span class="label">Altitude (m):</span> <span id="altDisplay">--</span></div>
+      <div><span class="label">Altitude Acc (m):</span> <span id="altAccDisplay">--</span></div>
+    </div>
+
+    <!-- Heading & Distance Row -->
+    <div class="stats-row">
+      <div>
+        <span class="label">Heading:</span> 
+        <span id="headingDisplay">--</span>
+      </div>
+      <div>
+        <span class="label">Distance (mi):</span> 
+        <span id="distanceDisplay">0.00</span>
+      </div>
+    </div>
+
+    <!-- Speed Stats Row -->
+    <div class="stats-row">
+      <div>
+        <span class="label">Max Speed (mph):</span> 
+        <span id="maxSpeedDisplay">0.0</span>
+      </div>
+      <div>
+        <span class="label">Avg Speed (mph):</span> 
+        <span id="avgSpeedDisplay">0.0</span>
+      </div>
+    </div>
+
+    <!-- Weather box -->
+    <div class="weather-box">
+      <p><span class="label">Weather:</span> <span id="weatherDesc">N/A</span></p>
+      <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
+    </div>
+
+    <!-- MAP -->
+    <h2>Map</h2>
+    <div id="map"></div>
+
+    <!-- Speed Over Time Chart -->
+    <h2>Speed Over Time</h2>
+    <div id="speedChart"></div>
+  </div>
+
+  <!-- Main JS -->
+  <script src="app.js"></script>
+</body>
+</html>

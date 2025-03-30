@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cyber Speed & Weather</title>
+  <title>SpeedMeter</title>
   <!-- Include Plotly -->
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
   <style>
-    /* ====== BASE STYLES (DARK MODE BY DEFAULT) ====== */
+    /* ====== BASE STYLES (Dark Mode by Default) ====== */
     * {
       margin: 0;
       padding: 0;
@@ -20,23 +20,22 @@
       color: #eee;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow-x: hidden;
-      overflow-y: auto; /* or hidden if you prefer */
+      overflow-y: auto;
     }
 
-    /* Center the "Connect" button overlay */
+    /* Connect Overlay */
     #connectOverlay {
       display: flex;
       align-items: center;
       justify-content: center;
       position: absolute;
-      top: 0; 
+      top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: #111; /* same dark background */
-      z-index: 999; /* on top of everything */
+      background: #111;
+      z-index: 999;
     }
-
     #connectBtn {
       font-size: 1.2rem;
       padding: 1rem 2rem;
@@ -51,7 +50,7 @@
       background: #afa;
     }
 
-    /* Main App Container (initially hidden until connect) */
+    /* Main App Container (hidden until connect) */
     #appContainer {
       display: none; /* hidden until geolocation starts */
       width: 100%;
@@ -66,15 +65,14 @@
       color: #0ff;
       padding: 1rem;
       margin-bottom: 1rem;
-      position: relative; /* so we can position the Options button on the side */
+      position: relative;
     }
-
     header h1 {
       margin: 0;
       font-size: 1.5rem;
     }
 
-    /* Options button in the header (e.g., top-right corner) */
+    /* Options button in the header */
     #optionsBtn {
       position: absolute;
       top: 1rem;
@@ -142,7 +140,7 @@
       color: #888;
     }
 
-    /* Light Mode Overrides (if user toggles off dark mode) */
+    /* Light Mode Overrides (if user unchecks Dark Mode) */
     body.light-mode {
       background: #f0f0f0;
       color: #333;
@@ -176,8 +174,9 @@
 
   <!-- MAIN APP -->
   <div id="appContainer">
+    <br>
     <header>
-      <h1>Cyber Speed &amp; Weather</h1>
+      <h1>&amp;</h1>
       <button id="optionsBtn">Options</button>
     </header>
 
@@ -187,7 +186,7 @@
         <input type="checkbox" id="darkModeToggle" checked />
         Dark Mode
       </label>
-      <!-- Add more toggles or options here -->
+      <!-- Add more toggles or options here if needed -->
     </div>
 
     <!-- Speed Gauge -->
@@ -198,31 +197,30 @@
       <div><span class="label">Time:</span> <span id="timeDisplay">--:--:-- --</span></div>
       <div><span class="label">Latitude:</span> <span id="latDisplay">--</span></div>
       <div><span class="label">Longitude:</span> <span id="lonDisplay">--</span></div>
+      <div><span class="label">Altitude (m):</span> <span id="altDisplay">--</span></div>
     </div>
 
     <!-- Weather box -->
     <div class="weather-box">
       <p><span class="label">Weather:</span> <span id="weatherDesc">N/A</span></p>
-      <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°C</p>
+      <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
     </div>
   </div>
 
   <script>
     /***************************************************************
-     * GAUGE SETUP
+     * GAUGE SETUP (MPH)
      ***************************************************************/
     let gaugeChart = null;
-    let gaugeData = null;
-    let gaugeLayout = null;
 
     function createGauge(initialValue = 0) {
-      gaugeData = [
+      const data = [
         {
           type: "indicator",
           mode: "gauge+number",
           value: initialValue,
           title: {
-            text: "Speed (m/s)",
+            text: "",
             font: { size: 18 }
           },
           number: {
@@ -230,7 +228,7 @@
           },
           gauge: {
             axis: {
-              range: [0, 30],
+              range: [0, 120], // mph range
               tickwidth: 2,
               tickcolor: "#0ff"
             },
@@ -241,15 +239,15 @@
             borderwidth: 2,
             bordercolor: "#0ff",
             steps: [
-              { range: [0, 10], color: "#034" },
-              { range: [10, 20], color: "#067" },
-              { range: [20, 30], color: "#0a0" }
+              { range: [0, 40], color: "#034" },
+              { range: [40, 80], color: "#067" },
+              { range: [80, 120], color: "#0a0" }
             ]
           }
         }
       ];
 
-      gaugeLayout = {
+      const layout = {
         paper_bgcolor: "rgba(0,0,0,0)",
         plot_bgcolor: "rgba(0,0,0,0)",
         margin: { t: 0, b: 0, l: 0, r: 0 }
@@ -260,18 +258,18 @@
         displaylogo: false
       };
 
-      Plotly.newPlot("speedGauge", gaugeData, gaugeLayout, config).then((chart) => {
+      Plotly.newPlot("speedGauge", data, layout, config).then((chart) => {
         gaugeChart = chart;
       });
     }
 
-    function updateGauge(newSpeed) {
+    function updateGauge(newSpeedMph) {
       if (!gaugeChart) return;
-      Plotly.update("speedGauge", { value: [newSpeed] }, {}, [0]);
+      Plotly.update("speedGauge", { value: [newSpeedMph] }, {}, [0]);
     }
 
     /***************************************************************
-     * TIME & LOCATION
+     * TIME (12-hour) & LOCATION
      ***************************************************************/
     function updateTimeDisplay() {
       const timeEl = document.getElementById("timeDisplay");
@@ -280,11 +278,11 @@
       let minutes = now.getMinutes();
       let seconds = now.getSeconds();
 
-      // Convert to 12-hour
+      // Convert to 12-hour format
       const ampm = hours >= 12 ? "PM" : "AM";
       hours = hours % 12;
       if (hours === 0) {
-        hours = 12;
+        hours = 12; // midnight or noon is 12
       }
 
       const h = String(hours).padStart(2, "0");
@@ -293,24 +291,26 @@
 
       timeEl.textContent = `${h}:${m}:${s} ${ampm}`;
     }
-    setInterval(updateTimeDisplay, 1000);
+    setInterval(updateTimeDisplay, 1000); // update clock every second
 
     let lastPosition = null;
     function handlePosition(pos) {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const speed = pos.coords.speed; // in m/s (can be null)
+      const speedMps = pos.coords.speed; // in m/s (may be null)
 
       document.getElementById("latDisplay").textContent = lat.toFixed(5);
       document.getElementById("lonDisplay").textContent = lon.toFixed(5);
 
-      if (speed !== null && !isNaN(speed)) {
-        updateGauge(speed);
+      if (speedMps !== null && !isNaN(speedMps)) {
+        // Convert to mph: 1 m/s = 2.23694 mph
+        const speedMph = speedMps * 2.23694;
+        updateGauge(speedMph);
       } else {
         updateGauge(0);
       }
 
-      // If we moved significantly, fetch new weather
+      // If moved significantly, fetch new weather
       if (!lastPosition || distanceBetween(lastPosition, pos.coords) > 0.01) {
         fetchWeather(lat, lon);
       }
@@ -324,7 +324,7 @@
 
     // Haversine formula for distance (km)
     function distanceBetween(coordsA, coordsB) {
-      const R = 6371;
+      const R = 6371; // Earth radius (km)
       const dLat = toRad(coordsB.latitude - coordsA.latitude);
       const dLon = toRad(coordsB.longitude - coordsA.longitude);
       const lat1 = toRad(coordsA.latitude);
@@ -337,17 +337,17 @@
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
-
     function toRad(value) {
       return (value * Math.PI) / 180;
     }
 
     /***************************************************************
-     * WEATHER FETCH
+     * WEATHER FETCH (FAHRENHEIT)
      ***************************************************************/
     async function fetchWeather(lat, lon) {
-      const apiKey = "2c523879d607be23b14fabb202cce5bc"; // Replace
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+      const apiKey = "2c523879d607be23b14fabb202cce5bc"; // Replace with your key
+      // 'units=imperial' => Fahrenheit
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`;
 
       try {
         const response = await fetch(url);
@@ -356,10 +356,10 @@
         }
         const data = await response.json();
         const description = data.weather[0].description;
-        const temp = data.main.temp;
+        const tempF = data.main.temp; // Fahrenheit
 
         document.getElementById("weatherDesc").textContent = description;
-        document.getElementById("weatherTemp").textContent = temp.toFixed(1);
+        document.getElementById("weatherTemp").textContent = tempF.toFixed(1);
       } catch (err) {
         console.error("Error fetching weather:", err);
         document.getElementById("weatherDesc").textContent = "N/A";
@@ -401,7 +401,7 @@
     const appContainer = document.getElementById("appContainer");
 
     connectBtn.addEventListener("click", () => {
-      // Hide the overlay, show the main app container
+      // Hide the overlay, show main app
       connectOverlay.style.display = "none";
       appContainer.style.display = "block";
 
@@ -409,10 +409,12 @@
       createGauge(0);
       updateTimeDisplay(); // Initialize the clock once
 
-      // Start geolocation
+      // Start geolocation with recommended settings for frequent updates
       if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(handlePosition, handleError, {
-          enableHighAccuracy: true
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 60000
         });
       } else {
         alert("Geolocation is not supported by your browser!");

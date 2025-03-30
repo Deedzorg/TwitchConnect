@@ -1,0 +1,277 @@
+/* ===== BASE STYLES (Dark Mode by Default) ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #111;
+  color: #eee;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Connect Overlay */
+#connectOverlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  z-index: 999;
+}
+#connectBtn {
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #0f0;
+  color: #000;
+  transition: background 0.3s;
+}
+#connectBtn:hover {
+  background: #afa;
+}
+
+/* Main App Container */
+#appContainer {
+  display: none; /* hidden until geolocation starts */
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: center;
+}
+header {
+  background: #000;
+  color: #0ff;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+#optionsBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 2px solid #0ff;
+  color: #0ff;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+#optionsBtn:hover {
+  background: #0ff;
+  color: #000;
+}
+
+/* Options Menu (hidden by default) */
+#optionsMenu {
+  display: none;
+  background: #222;
+  border: 2px solid #0ff;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  text-align: left;
+}
+#optionsMenu label {
+  display: block;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* Feature Containers */
+.feature-container {
+  margin: 1rem auto;
+  display: block;
+  position: relative;
+  background: #222;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(255,255,255,0.2);
+  padding: 1rem;
+}
+
+/* Feature header with move up/down buttons */
+.feature-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.feature-header h2 {
+  margin: 0;
+}
+.feature-header button.move-up,
+.feature-header button.move-down {
+  border: 1px solid #0ff;
+  background: #000;
+  color: #0ff;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+.feature-header button.move-up:hover,
+.feature-header button.move-down:hover {
+  background: #0ff;
+  color: #000;
+}
+
+/* TIME MODULE */
+#timeContainer {
+  max-width: 400px;
+  margin: 1rem auto;
+}
+#timeContainer .time-display {
+  font-size: 1.4rem;
+}
+
+/* LOCATION MODULE */
+#locationContainer {
+  max-width: 400px;
+  margin: 1rem auto;
+}
+.location-display p {
+  margin: 0.4rem 0;
+  font-size: 1.1rem;
+}
+
+/* WEATHER MODULE */
+#weatherContainer {
+  max-width: 400px;
+  margin: 1rem auto;
+}
+.weather-box {
+  text-align: center;
+}
+.weather-box .label {
+  color: #888;
+}
+
+/* SPEED GAUGE */
+#speedGaugeContainer {
+  width: 100%;
+  max-width: 400px;
+}
+#speedGauge {
+  width: 100%;
+  height: 300px;
+}
+
+/* HEADING GAUGE */
+#headingGaugeContainer {
+  width: 100%;
+  max-width: 400px;
+}
+#headingGauge {
+  width: 100%;
+  height: 300px;
+}
+
+/* HEADING TAPE */
+#headingTapeContainer {
+  width: 360px;
+  height: 60px;
+  position: relative;
+  overflow: hidden;
+}
+#headingTapeWindow {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+#headingTape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 60px;
+  width: 2000px;
+  background: repeating-linear-gradient(
+    to right,
+    #333 0px,
+    #333 9px,
+    #0ff 10px,
+    #333 11px,
+    #333 19px,
+    #0ff 20px,
+    #333 21px,
+    #333 29px,
+    #0ff 30px
+  );
+}
+.tape-marker {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 60px;
+  width: 2px;
+  background: #f00;
+}
+
+/* MAP */
+#mapContainer {
+  width: 100%;
+  max-width: 700px;
+}
+#map {
+  width: 100%;
+  height: 400px;
+  border: 2px solid #0ff;
+  border-radius: 8px;
+}
+
+/* Light Mode Overrides */
+body.light-mode {
+  background: #f0f0f0;
+  color: #333;
+}
+body.light-mode #connectOverlay {
+  background: #eee;
+}
+body.light-mode header {
+  background: #ddd;
+  color: #333;
+}
+body.light-mode #optionsBtn {
+  border-color: #333;
+  color: #333;
+}
+body.light-mode #optionsBtn:hover {
+  background: #333;
+  color: #fff;
+}
+body.light-mode .feature-container {
+  background: #fff;
+  color: #333;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
+}
+body.light-mode #headingTape {
+  background: repeating-linear-gradient(
+    to right,
+    #ddd 0px,
+    #ddd 9px,
+    #00f 10px,
+    #ddd 11px,
+    #ddd 19px,
+    #00f 20px,
+    #ddd 21px,
+    #ddd 29px,
+    #00f 30px
+  );
+}
