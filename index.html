@@ -2,177 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Mobile-Friendly Modular Geolocation App</title>
-
-  <!-- Plotly (for Speed & Heading Gauges) -->
-  <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
-
-  <!-- Leaflet (for Map) -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  ></script>
-
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <title>Twitch Multi-Chat</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- CONNECT OVERLAY -->
-  <div id="connectOverlay">
-    <button id="connectBtn">Connect</button>
+  <h2>Twitch Multi-Chat Viewer</h2>
+  
+  <button id="loginBtn" style="display: none;">Log In</button>
+  <button id="logoutBtn" style="display: none;">Log Out</button>
+  
+<!-- 
+  <button onclick="window.open('speeddisplay.html', '_blank')">Open Speed Display</button>
+  
+  -->
+  
+  <button onclick="window.location.href='speeddisplay/index.html'">Open Speed Display</button>
+
+  <!-- Add Chat and Manage Channels buttons -->
+  <button title="will not be saved" onclick="addChat()">➕ Add Chat</button>
+  <button onclick="toggleChannelManager()">📝 Manage Auto Channels</button>
+  
+  <!-- Channel Manager Panel (initially hidden) -->
+  <div id="channelManager" style="display: none; border: 1px solid #444; padding: 10px; margin: 10px auto; max-width: 400px; background: #222; color: #fff;">
+    <h3 style="margin-top: 0;">Tracked Channels</h3>
+    <ul id="trackedChannelsList"></ul>
+    <input type="text" id="newTrackedChannel" placeholder="Enter channel name" style="width: 70%; padding: 5px; margin-top: 10px;" />
+    <button onclick="addTrackedChannel()">Add Channel</button>
   </div>
-
-  <!-- MAIN APP -->
-  <div id="appContainer">
-    <header>
-      <h1>Modular Geolocation App</h1>
-      <button id="optionsBtn">Options</button>
-    </header>
-
-    <!-- OPTIONS MENU (TOGGLES) -->
-    <div id="optionsMenu">
-      <label>
-        <input type="checkbox" id="darkModeToggle" checked />
-        Dark Mode
-      </label>
-      <label>
-        <input type="checkbox" id="timeToggle" checked />
-        Show Time
-      </label>
-      <label>
-        <input type="checkbox" id="locationToggle" checked />
-        Show Location
-      </label>
-      <label>
-        <input type="checkbox" id="weatherToggle" checked />
-        Show Weather
-      </label>
-      <label>
-        <input type="checkbox" id="speedGaugeToggle" checked />
-        Show Speed Gauge
-      </label>
-      <label>
-        <input type="checkbox" id="headingGaugeToggle" />
-        Show Heading Gauge
-      </label>
-      <label>
-        <input type="checkbox" id="headingTapeToggle" />
-        Show Heading Tape
-      </label>
-      <label>
-        <input type="checkbox" id="mapToggle" />
-        Show Map
-      </label>
-    </div>
-
-    <!-- TIME MODULE -->
-    <div id="timeContainer" class="feature-container" data-toggle-id="timeToggle">
-      <div class="feature-header">
-        <h2>Current Time</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <p class="time-display">
-        <span id="timeDisplay">--:--:-- --</span>
-      </p>
-    </div>
-
-    <!-- LOCATION MODULE (Lat, Lon, Alt) -->
-    <div id="locationContainer" class="feature-container" data-toggle-id="locationToggle">
-      <div class="feature-header">
-        <h2>Location</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div class="location-display">
-        <p><strong>Latitude:</strong> <span id="latDisplay">--</span></p>
-        <p><strong>Longitude:</strong> <span id="lonDisplay">--</span></p>
-        <p><strong>Altitude (m):</strong> <span id="altDisplay">--</span></p>
-      </div>
-    </div>
-
-    <!-- WEATHER MODULE -->
-    <div id="weatherContainer" class="feature-container" data-toggle-id="weatherToggle">
-      <div class="feature-header">
-        <h2>Weather</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div class="weather-box">
-        <p><span class="label">Description:</span> <span id="weatherDesc">N/A</span></p>
-        <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
-      </div>
-    </div>
-
-    <!-- SPEED GAUGE -->
-    <div id="speedGaugeContainer" class="feature-container" data-toggle-id="speedGaugeToggle">
-      <div class="feature-header">
-        <h2>Speed (mph)</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div id="speedGauge"></div>
-    </div>
-
-    <!-- HEADING GAUGE -->
-    <div id="headingGaugeContainer" class="feature-container" style="display: none;" data-toggle-id="headingGaugeToggle">
-      <div class="feature-header">
-        <h2>Heading (°)</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div id="headingGauge"></div>
-    </div>
-
-    <!-- HEADING TAPE -->
-    <div id="headingTapeContainer" class="feature-container" style="display: none;" data-toggle-id="headingTapeToggle">
-      <div class="feature-header">
-        <h2>Aviation-Style Heading Tape</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div id="headingTapeWindow">
-        <div id="headingTape"></div>
-        <div class="tape-marker"></div>
-      </div>
-    </div>
-
-    <!-- MAP -->
-    <div id="mapContainer" class="feature-container" style="display: none;" data-toggle-id="mapToggle">
-      <div class="feature-header">
-        <h2>Map</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
-      </div>
-      <div id="map"></div>
-    </div>
+  
+  <!-- Slider container for chat boxes -->
+  <div class="chat-slider">
+    <button class="slider-btn" id="prevBtn" onclick="slideChats(-1)">&#10094;</button>
+    <div class="chat-container" id="chat-container"></div>
+    <button class="slider-btn" id="nextBtn" onclick="slideChats(1)">&#10095;</button>
   </div>
+  
+  <!-- Global input for sending a message to all chats -->
+  <div class="global-chat-input">
+    <input type="text" id="globalMessage" placeholder="Type your message for all chats..." />
+    <button onclick="sendGlobalMessage()">Send to All</button>
+    <!-- Emote picker button for global input -->
+    <button class="emote-picker-btn" onclick="toggleEmotePicker('global')" aria-label="Emote picker" data-a-target="emote-picker-button">
+      <!-- Sample Twitch-like icon -->
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <g>
+          <path d="M7 11a1 1 0 100-2 1 1 0 000 2zM14 10a1 1 0 11-2 0 1 1 0 012 0zM10 14a2 2 0 002-2H8a2 2 0 002 2z"></path>
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0a6 6 0 11-12 0 6 6 0 0112 0z" clip-rule="evenodd"></path>
+        </g>
+      </svg>
+    <!-- Emote picker popup for global input -->
+    <div class="emote-picker" id="globalEmotePicker" ></div>
 
-  <!-- Main JS -->
+
+  <div class="version-label">Version 1.585.5</div>
+
   <script src="script.js"></script>
+
+
+
+
 </body>
 </html>
