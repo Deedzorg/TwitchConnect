@@ -8,10 +8,180 @@ let mapMarker = null;
 let lastPosition = null;      // For distance checks
 
 const HEADING_TAPE_SCALE = 2; // px per degree
-const headingTape = document.getElementById("headingTape");
 
 /***************************************************************
- * CONNECT BUTTON & INIT
+ * MODULE DEFINITIONS (for dynamic module creation)
+ ***************************************************************/
+const MODULE_DEFINITIONS = [
+  {
+    id: "timeModule",
+    title: "Current Time",
+    defaultVisible: true,
+    render(containerEl) {
+      containerEl.innerHTML = `<p class="time-display"><span id="timeDisplay">--:--:-- --</span></p>`;
+    }
+  },
+  {
+    id: "locationModule",
+    title: "Location",
+    defaultVisible: true,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <p><strong>Latitude:</strong> <span id="latDisplay">--</span></p>
+        <p><strong>Longitude:</strong> <span id="lonDisplay">--</span></p>
+        <p><strong>Altitude (m):</strong> <span id="altDisplay">--</span></p>
+      `;
+    }
+  },
+  {
+    id: "weatherModule",
+    title: "Weather",
+    defaultVisible: true,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div class="weather-box">
+          <p><span class="label">Description:</span> <span id="weatherDesc">N/A</span></p>
+          <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
+        </div>
+      `;
+    }
+  },
+  {
+    id: "speedGaugeModule",
+    title: "Speed (mph)",
+    defaultVisible: true,
+    render(containerEl) {
+      containerEl.innerHTML = `<div id="speedGauge" style="width:100%;height:300px;"></div>`;
+      createSpeedGauge(0);
+    }
+  },
+  {
+    id: "headingGaugeModule",
+    title: "Heading (°)",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `<div id="headingGauge" style="width:100%;height:300px;"></div>`;
+      createHeadingGauge(0);
+    }
+  },
+  {
+    id: "headingTapeModule",
+    title: "Aviation-Style Heading Tape",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div id="headingTapeWindow" style="width:360px;height:60px;position:relative;overflow:hidden;">
+          <div id="headingTape" style="position:absolute;top:0;left:0;width:2000px;height:60px;
+            background: repeating-linear-gradient(to right, #333 0px, #333 9px, #0ff 10px,
+            #333 11px, #333 19px, #0ff 20px, #333 21px, #333 29px, #0ff 30px);"></div>
+          <div class="tape-marker" style="position:absolute;left:50%;top:0;width:2px;height:60px;background:red;"></div>
+        </div>
+      `;
+    }
+  },
+  {
+    id: "mapModule",
+    title: "Map",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `<div id="map" style="width:100%;height:400px;"></div>`;
+      initMap();
+    }
+  }
+];
+
+/***************************************************************
+ * INITIALIZE MODULES
+ ***************************************************************/
+function initializeModules() {
+  const optionsMenu = document.getElementById("optionsMenu");
+  const modulesContainer = document.getElementById("modulesContainer");
+
+  // Ensure dark mode toggle exists and attach its listener immediately
+  let darkToggle = document.getElementById("darkModeToggle");
+  if (!darkToggle) {
+    const darkLabel = document.createElement("label");
+    darkLabel.innerHTML = `<input type="checkbox" id="darkModeToggle" checked> Dark Mode`;
+    optionsMenu.appendChild(darkLabel);
+    darkToggle = document.getElementById("darkModeToggle");
+    darkToggle.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        document.body.classList.remove("light-mode");
+      } else {
+        document.body.classList.add("light-mode");
+      }
+    });
+  }
+
+  // Process the rest of your module definitions…
+  MODULE_DEFINITIONS.forEach((def) => {
+    // Create the toggle for each module
+    const toggleLabel = document.createElement("label");
+    toggleLabel.innerHTML = `<input type="checkbox" id="${def.id}Toggle"> ${def.title}`;
+    optionsMenu.appendChild(toggleLabel);
+
+    // Create the module container
+    const container = document.createElement("div");
+    container.classList.add("feature-container");
+    container.setAttribute("id", def.id + "Container");
+    container.setAttribute("data-toggle-id", def.id + "Toggle");
+
+    container.innerHTML = `
+      <div class="feature-header">
+        <h2>${def.title}</h2>
+        <div class="header-controls">
+          <button class="move-up">▲</button>
+          <button class="move-down">▼</button>
+          <button class="close-module">X</button>
+        </div>
+      </div>
+      <div class="module-body"></div>
+    `;
+    modulesContainer.appendChild(container);
+
+    // Render module content
+    const bodyEl = container.querySelector(".module-body");
+    if (def.render) {
+      def.render(bodyEl);
+    }
+
+    // Set initial visibility
+    const toggle = document.getElementById(def.id + "Toggle");
+    toggle.checked = def.defaultVisible;
+    container.style.display = def.defaultVisible ? "block" : "none";
+
+    // Wire up toggle change
+    toggle.addEventListener("change", (e) => {
+      container.style.display = e.target.checked ? "block" : "none";
+    });
+
+    // Setup move up, move down, and close buttons
+    const moveUpBtn = container.querySelector(".move-up");
+    const moveDownBtn = container.querySelector(".move-down");
+    const closeBtn = container.querySelector(".close-module");
+
+    moveUpBtn.addEventListener("click", () => {
+      const prev = container.previousElementSibling;
+      if (prev) {
+        container.parentNode.insertBefore(container, prev);
+      }
+    });
+    moveDownBtn.addEventListener("click", () => {
+      const next = container.nextElementSibling;
+      if (next) {
+        container.parentNode.insertBefore(next, container);
+      }
+    });
+    closeBtn.addEventListener("click", () => {
+      container.style.display = "none";
+      toggle.checked = false;
+    });
+  });
+}
+
+
+/***************************************************************
+ * CONNECT & INIT
  ***************************************************************/
 const connectOverlay = document.getElementById("connectOverlay");
 const connectBtn = document.getElementById("connectBtn");
@@ -21,14 +191,22 @@ connectBtn.addEventListener("click", () => {
   connectOverlay.style.display = "none";
   appContainer.style.display = "block";
 
-  // Create gauges
-  createSpeedGauge(0);
-  createHeadingGauge(0);
+  // Initialize modules (creates dark mode toggle among others)
+  initializeModules();
 
-  // Initialize map
-  initMap();
+  // Now attach the dark mode listener immediately:
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        document.body.classList.remove("light-mode");
+      } else {
+        document.body.classList.add("light-mode");
+      }
+    });
+  }
 
-  // Start geolocation
+  // Start geolocation, time updates, etc.
   if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition(handlePosition, handleError, {
       enableHighAccuracy: true,
@@ -38,8 +216,6 @@ connectBtn.addEventListener("click", () => {
   } else {
     alert("Geolocation not supported by this browser!");
   }
-
-  // Start clock
   updateTimeDisplay();
 });
 
@@ -49,23 +225,24 @@ connectBtn.addEventListener("click", () => {
 function handlePosition(pos) {
   const { latitude, longitude, altitude, speed, heading } = pos.coords;
 
-  // Location
-  document.getElementById("latDisplay").textContent = latitude.toFixed(5);
-  document.getElementById("lonDisplay").textContent = longitude.toFixed(5);
-  if (altitude !== null && !isNaN(altitude)) {
-    document.getElementById("altDisplay").textContent = altitude.toFixed(1);
-  } else {
-    document.getElementById("altDisplay").textContent = "--";
+  // Update location fields
+  const latEl = document.getElementById("latDisplay");
+  const lonEl = document.getElementById("lonDisplay");
+  const altEl = document.getElementById("altDisplay");
+  if (latEl) latEl.textContent = latitude.toFixed(5);
+  if (lonEl) lonEl.textContent = longitude.toFixed(5);
+  if (altEl) {
+    altEl.textContent = (altitude !== null && !isNaN(altitude)) ? altitude.toFixed(1) : "--";
   }
 
-  // Speed gauge
+  // Update speed gauge (m/s -> mph)
   let mph = 0;
   if (speed !== null && !isNaN(speed)) {
-    mph = speed * 2.23694; // m/s -> mph
+    mph = speed * 2.23694;
   }
   updateSpeedGauge(mph);
 
-  // Heading gauge & tape
+  // Update heading gauge and tape
   if (heading !== null && !isNaN(heading)) {
     updateHeadingGauge(heading);
     updateHeadingTape(heading);
@@ -74,7 +251,7 @@ function handlePosition(pos) {
     updateHeadingTape(0);
   }
 
-  // Weather if moved enough
+  // Update weather if moved enough
   if (!lastPosition || distanceBetween(lastPosition, pos.coords) > 0.01) {
     fetchWeather(latitude, longitude);
   }
@@ -89,24 +266,19 @@ function handleError(err) {
 }
 
 /***************************************************************
- * TIME
+ * TIME UPDATE
  ***************************************************************/
 function updateTimeDisplay() {
   const timeEl = document.getElementById("timeDisplay");
+  if (!timeEl) return;
   const now = new Date();
   let hours = now.getHours();
   let minutes = now.getMinutes();
   let seconds = now.getSeconds();
-
   const ampm = hours >= 12 ? "PM" : "AM";
   hours = hours % 12;
   if (hours === 0) hours = 12;
-
-  const hh = String(hours).padStart(2, "0");
-  const mm = String(minutes).padStart(2, "0");
-  const ss = String(seconds).padStart(2, "0");
-
-  timeEl.textContent = `${hh}:${mm}:${ss} ${ampm}`;
+  timeEl.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} ${ampm}`;
 }
 setInterval(updateTimeDisplay, 1000);
 
@@ -190,11 +362,13 @@ function updateHeadingGauge(deg) {
  * HEADING TAPE
  ***************************************************************/
 function updateHeadingTape(deg) {
-  headingTape.style.transform = `translateX(-${deg * HEADING_TAPE_SCALE}px)`;
+  const tapeEl = document.getElementById("headingTape");
+  if (!tapeEl) return;
+  tapeEl.style.transform = `translateX(-${deg * HEADING_TAPE_SCALE}px)`;
 }
 
 /***************************************************************
- * MAP (LEAFLET)
+ * MAP (Leaflet)
  ***************************************************************/
 function initMap() {
   map = L.map("map").setView([0, 0], 2);
@@ -216,119 +390,38 @@ function updateMap(lat, lon) {
  * WEATHER FETCH
  ***************************************************************/
 async function fetchWeather(lat, lon) {
-  // Replace with your real API key
+  // IMPORTANT: Replace with your valid OpenWeather API key.
   const apiKey = "2c523879d607be23b14fabb202cce5bc";
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`;
-
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Weather API response not OK.");
     const data = await response.json();
-    document.getElementById("weatherDesc").textContent = data.weather[0].description;
-    document.getElementById("weatherTemp").textContent = data.main.temp.toFixed(1);
+    const descEl = document.getElementById("weatherDesc");
+    const tempEl = document.getElementById("weatherTemp");
+    if (descEl) descEl.textContent = data.weather[0].description;
+    if (tempEl) tempEl.textContent = data.main.temp.toFixed(1);
   } catch (err) {
     console.error("Error fetching weather:", err);
-    document.getElementById("weatherDesc").textContent = "N/A";
-    document.getElementById("weatherTemp").textContent = "--";
+    const descEl = document.getElementById("weatherDesc");
+    const tempEl = document.getElementById("weatherTemp");
+    if (descEl) descEl.textContent = "N/A";
+    if (tempEl) tempEl.textContent = "--";
   }
 }
-
-/***************************************************************
- * OPTIONS MENU & DARK MODE
- ***************************************************************/
-const optionsBtn = document.getElementById("optionsBtn");
-const optionsMenu = document.getElementById("optionsMenu");
-
-const darkModeToggle    = document.getElementById("darkModeToggle");
-const timeToggle        = document.getElementById("timeToggle");
-const locationToggle    = document.getElementById("locationToggle");
-const weatherToggle     = document.getElementById("weatherToggle");
-const speedGaugeToggle  = document.getElementById("speedGaugeToggle");
-const headingGaugeToggle= document.getElementById("headingGaugeToggle");
-const headingTapeToggle = document.getElementById("headingTapeToggle");
-const mapToggle         = document.getElementById("mapToggle");
-
-const timeContainer      = document.getElementById("timeContainer");
-const locationContainer  = document.getElementById("locationContainer");
-const weatherContainer   = document.getElementById("weatherContainer");
-const speedGaugeContainer   = document.getElementById("speedGaugeContainer");
-const headingGaugeContainer = document.getElementById("headingGaugeContainer");
-const headingTapeContainer  = document.getElementById("headingTapeContainer");
-const mapContainer          = document.getElementById("mapContainer");
-
-// Toggle Options menu visibility
-optionsBtn.addEventListener("click", () => {
-  if (!optionsMenu.style.display || optionsMenu.style.display === "none") {
-    optionsMenu.style.display = "block";
-  } else {
-    optionsMenu.style.display = "none";
-  }
-});
-
-// Dark / Light Mode
-darkModeToggle.addEventListener("change", (e) => {
-  if (e.target.checked) {
-    document.body.classList.remove("light-mode");
-  } else {
-    document.body.classList.add("light-mode");
-  }
-});
-
-// Time Toggle
-timeToggle.addEventListener("change", (e) => {
-  timeContainer.style.display = e.target.checked ? "block" : "none";
-});
-
-// Location Toggle
-locationToggle.addEventListener("change", (e) => {
-  locationContainer.style.display = e.target.checked ? "block" : "none";
-});
-
-// Weather Toggle
-weatherToggle.addEventListener("change", (e) => {
-  weatherContainer.style.display = e.target.checked ? "block" : "none";
-});
-
-// Speed Gauge Toggle
-speedGaugeToggle.addEventListener("change", (e) => {
-  speedGaugeContainer.style.display = e.target.checked ? "block" : "none";
-});
-
-// Heading Gauge Toggle
-headingGaugeToggle.addEventListener("change", (e) => {
-  headingGaugeContainer.style.display = e.target.checked ? "block" : "none";
-  if (e.target.checked && headingGaugeChart) {
-    // Re-draw the Plotly gauge if it was previously hidden
-    setTimeout(() => { Plotly.Plots.resize(headingGaugeChart); }, 100);
-  }
-});
-
-// Heading Tape Toggle
-headingTapeToggle.addEventListener("change", (e) => {
-  headingTapeContainer.style.display = e.target.checked ? "block" : "none";
-});
-
-// Map Toggle
-mapToggle.addEventListener("change", (e) => {
-  mapContainer.style.display = e.target.checked ? "block" : "none";
-  if (e.target.checked && map) {
-    setTimeout(() => { map.invalidateSize(); }, 100);
-  }
-});
 
 /***************************************************************
  * DISTANCE HELPER
  ***************************************************************/
 function distanceBetween(coordsA, coordsB) {
-  const R = 6371; // Earth radius in km
+  const R = 6371; // km
   const dLat = toRad(coordsB.latitude - coordsA.latitude);
   const dLon = toRad(coordsB.longitude - coordsA.longitude);
   const lat1 = toRad(coordsA.latitude);
   const lat2 = toRad(coordsB.latitude);
-
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-            Math.cos(lat1)*Math.cos(lat2)*
-            Math.sin(dLon/2)*Math.sin(dLon/2);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -337,26 +430,86 @@ function toRad(value) {
 }
 
 /***************************************************************
- * MOVE UP / MOVE DOWN LOGIC
+ * OPTIONS MENU & DARK/LIGHT MODE
  ***************************************************************/
-document.querySelectorAll(".move-up").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const feature = btn.closest(".feature-container");
-    if (!feature) return;
-    const prev = feature.previousElementSibling;
-    if (prev) {
-      feature.parentNode.insertBefore(feature, prev);
-    }
-  });
+const optionsBtn = document.getElementById("optionsBtn");
+const optionsMenu = document.getElementById("optionsMenu");
+
+optionsBtn.addEventListener("click", () => {
+  optionsMenu.classList.toggle("open");
 });
 
-document.querySelectorAll(".move-down").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const feature = btn.closest(".feature-container");
-    if (!feature) return;
-    const next = feature.nextElementSibling;
-    if (next) {
-      feature.parentNode.insertBefore(next, feature);
+// Dark/Light mode toggle
+const darkModeToggle = document.getElementById("darkModeToggle");
+if (darkModeToggle) {
+  darkModeToggle.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      document.body.classList.remove("light-mode");
+    } else {
+      document.body.classList.add("light-mode");
     }
   });
+}
+
+/***************************************************************
+ * OPTIONS MENU - Dynamic Toggle Handling
+ ***************************************************************/
+function setupOptionsToggles() {
+  MODULE_DEFINITIONS.forEach((def) => {
+    const toggle = document.getElementById(def.id + "Toggle");
+    const container = document.getElementById(def.id + "Container");
+    if (toggle && container) {
+      toggle.addEventListener("change", (e) => {
+        container.style.display = e.target.checked ? "block" : "none";
+      });
+    }
+  });
+}
+
+/***************************************************************
+ * MODULE REORDER & CLOSE BUTTONS
+ ***************************************************************/
+function setupModuleControls() {
+  document.querySelectorAll(".move-up").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const feature = btn.closest(".feature-container");
+      if (!feature) return;
+      const prev = feature.previousElementSibling;
+      if (prev) {
+        feature.parentNode.insertBefore(feature, prev);
+      }
+    });
+  });
+  document.querySelectorAll(".move-down").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const feature = btn.closest(".feature-container");
+      if (!feature) return;
+      const next = feature.nextElementSibling;
+      if (next) {
+        feature.parentNode.insertBefore(next, feature);
+      }
+    });
+  });
+  document.querySelectorAll(".close-module").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const feature = btn.closest(".feature-container");
+      if (!feature) return;
+      feature.style.display = "none";
+      const toggleId = feature.getAttribute("data-toggle-id");
+      if (toggleId) {
+        const toggleEl = document.getElementById(toggleId);
+        if (toggleEl) {
+          toggleEl.checked = false;
+        }
+      }
+    });
+  });
+}
+
+/***************************************************************
+ * INITIALIZATION AFTER DOM LOADED
+ ***************************************************************/
+document.addEventListener("DOMContentLoaded", () => {
+  setupModuleControls();
+  setupOptionsToggles();
 });

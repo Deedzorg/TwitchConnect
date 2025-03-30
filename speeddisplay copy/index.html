@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Mobile-Friendly Modular Geolocation App</title>
+  <title>Modular Geolocation App</title>
 
   <!-- Plotly (for Speed & Heading Gauges) -->
   <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
@@ -69,14 +69,11 @@
     </div>
 
     <!-- TIME MODULE -->
-    <div id="timeContainer" class="feature-container" data-toggle-id="timeToggle">
+    <div id="timeContainer" class="feature-container">
       <div class="feature-header">
         <h2>Current Time</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <p class="time-display">
         <span id="timeDisplay">--:--:-- --</span>
@@ -84,14 +81,11 @@
     </div>
 
     <!-- LOCATION MODULE (Lat, Lon, Alt) -->
-    <div id="locationContainer" class="feature-container" data-toggle-id="locationToggle">
+    <div id="locationContainer" class="feature-container">
       <div class="feature-header">
         <h2>Location</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div class="location-display">
         <p><strong>Latitude:</strong> <span id="latDisplay">--</span></p>
@@ -101,14 +95,11 @@
     </div>
 
     <!-- WEATHER MODULE -->
-    <div id="weatherContainer" class="feature-container" data-toggle-id="weatherToggle">
+    <div id="weatherContainer" class="feature-container">
       <div class="feature-header">
         <h2>Weather</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div class="weather-box">
         <p><span class="label">Description:</span> <span id="weatherDesc">N/A</span></p>
@@ -117,40 +108,31 @@
     </div>
 
     <!-- SPEED GAUGE -->
-    <div id="speedGaugeContainer" class="feature-container" data-toggle-id="speedGaugeToggle">
+    <div id="speedGaugeContainer" class="feature-container">
       <div class="feature-header">
         <h2>Speed (mph)</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div id="speedGauge"></div>
     </div>
 
     <!-- HEADING GAUGE -->
-    <div id="headingGaugeContainer" class="feature-container" style="display: none;" data-toggle-id="headingGaugeToggle">
+    <div id="headingGaugeContainer" class="feature-container" style="display: none;">
       <div class="feature-header">
         <h2>Heading (°)</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div id="headingGauge"></div>
     </div>
 
     <!-- HEADING TAPE -->
-    <div id="headingTapeContainer" class="feature-container" style="display: none;" data-toggle-id="headingTapeToggle">
+    <div id="headingTapeContainer" class="feature-container" style="display: none;">
       <div class="feature-header">
         <h2>Aviation-Style Heading Tape</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div id="headingTapeWindow">
         <div id="headingTape"></div>
@@ -159,20 +141,17 @@
     </div>
 
     <!-- MAP -->
-    <div id="mapContainer" class="feature-container" style="display: none;" data-toggle-id="mapToggle">
+    <div id="mapContainer" class="feature-container" style="display: none;">
       <div class="feature-header">
         <h2>Map</h2>
-        <div class="header-controls">
-          <button class="move-up">▲</button>
-          <button class="move-down">▼</button>
-          <button class="close-module">X</button>
-        </div>
+        <button class="move-up">▲</button>
+        <button class="move-down">▼</button>
       </div>
       <div id="map"></div>
     </div>
   </div>
 
   <!-- Main JS -->
-  <script src="script.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

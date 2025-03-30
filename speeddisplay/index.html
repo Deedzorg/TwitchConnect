@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Modular Geolocation App</title>
+  <title>Modular Geolocation App (Config-Driven)</title>
 
   <!-- Plotly (for Speed & Heading Gauges) -->
   <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
@@ -34,121 +34,11 @@
 
     <!-- OPTIONS MENU (TOGGLES) -->
     <div id="optionsMenu">
-      <label>
-        <input type="checkbox" id="darkModeToggle" checked />
-        Dark Mode
-      </label>
-      <label>
-        <input type="checkbox" id="timeToggle" checked />
-        Show Time
-      </label>
-      <label>
-        <input type="checkbox" id="locationToggle" checked />
-        Show Location
-      </label>
-      <label>
-        <input type="checkbox" id="weatherToggle" checked />
-        Show Weather
-      </label>
-      <label>
-        <input type="checkbox" id="speedGaugeToggle" checked />
-        Show Speed Gauge
-      </label>
-      <label>
-        <input type="checkbox" id="headingGaugeToggle" />
-        Show Heading Gauge
-      </label>
-      <label>
-        <input type="checkbox" id="headingTapeToggle" />
-        Show Heading Tape
-      </label>
-      <label>
-        <input type="checkbox" id="mapToggle" />
-        Show Map
-      </label>
+      <!-- We'll programmatically fill in toggles here -->
     </div>
 
-    <!-- TIME MODULE -->
-    <div id="timeContainer" class="feature-container">
-      <div class="feature-header">
-        <h2>Current Time</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <p class="time-display">
-        <span id="timeDisplay">--:--:-- --</span>
-      </p>
-    </div>
-
-    <!-- LOCATION MODULE (Lat, Lon, Alt) -->
-    <div id="locationContainer" class="feature-container">
-      <div class="feature-header">
-        <h2>Location</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div class="location-display">
-        <p><strong>Latitude:</strong> <span id="latDisplay">--</span></p>
-        <p><strong>Longitude:</strong> <span id="lonDisplay">--</span></p>
-        <p><strong>Altitude (m):</strong> <span id="altDisplay">--</span></p>
-      </div>
-    </div>
-
-    <!-- WEATHER MODULE -->
-    <div id="weatherContainer" class="feature-container">
-      <div class="feature-header">
-        <h2>Weather</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div class="weather-box">
-        <p><span class="label">Description:</span> <span id="weatherDesc">N/A</span></p>
-        <p><span class="label">Temperature:</span> <span id="weatherTemp">--</span>°F</p>
-      </div>
-    </div>
-
-    <!-- SPEED GAUGE -->
-    <div id="speedGaugeContainer" class="feature-container">
-      <div class="feature-header">
-        <h2>Speed (mph)</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div id="speedGauge"></div>
-    </div>
-
-    <!-- HEADING GAUGE -->
-    <div id="headingGaugeContainer" class="feature-container" style="display: none;">
-      <div class="feature-header">
-        <h2>Heading (°)</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div id="headingGauge"></div>
-    </div>
-
-    <!-- HEADING TAPE -->
-    <div id="headingTapeContainer" class="feature-container" style="display: none;">
-      <div class="feature-header">
-        <h2>Aviation-Style Heading Tape</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div id="headingTapeWindow">
-        <div id="headingTape"></div>
-        <div class="tape-marker"></div>
-      </div>
-    </div>
-
-    <!-- MAP -->
-    <div id="mapContainer" class="feature-container" style="display: none;">
-      <div class="feature-header">
-        <h2>Map</h2>
-        <button class="move-up">▲</button>
-        <button class="move-down">▼</button>
-      </div>
-      <div id="map"></div>
-    </div>
+    <!-- This container will hold all dynamically added modules -->
+    <div id="modulesContainer"></div>
   </div>
 
   <!-- Main JS -->
