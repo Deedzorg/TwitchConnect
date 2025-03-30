@@ -316,3 +316,40 @@ body.light-mode #headingTape {
   );
   
 }
+@media (max-width: 600px) {
+  html {
+    font-size: 20px; /* Increase base font size on small screens */
+  }
+  header h1 {
+    font-size: 2rem;
+  }
+  #optionsBtn {
+    padding: 0.8rem 1rem;
+    font-size: 1.3rem;
+  }
+  #optionsMenu label {
+    font-size: 1.1rem;
+  }
+  .feature-container {
+    padding: 1.2rem;
+  }
+  .feature-header h2 {
+    font-size: 1.5rem;
+  }
+  .header-controls button {
+    padding: 0.3rem 0.7rem;
+    font-size: 1rem;
+  }
+  #timeContainer .time-display {
+    font-size: 1.8rem;
+  }
+  #speedGauge {
+    height: 360px;
+  }
+  #headingGauge {
+    height: 360px;
+  }
+  #map {
+    height: 500px;
+  }
+}
