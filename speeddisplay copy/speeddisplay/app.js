@@ -132,7 +132,6 @@ const MODULE_DEFINITIONS = [
       initMap();
     }
   },
-/*
   {
     id: "hourlyForecastModule",
     title: "Hourly Forecast",
@@ -149,8 +148,6 @@ const MODULE_DEFINITIONS = [
       containerEl.innerHTML = `<div id="dailyForecast" class="forecast-container"></div>`;
     }
   }
-*/
-
 ];
 
 /*

@@ -132,7 +132,6 @@ const MODULE_DEFINITIONS = [
       initMap();
     }
   },
-/*
   {
     id: "hourlyForecastModule",
     title: "Hourly Forecast",
@@ -149,8 +148,6 @@ const MODULE_DEFINITIONS = [
       containerEl.innerHTML = `<div id="dailyForecast" class="forecast-container"></div>`;
     }
   }
-*/
-
 ];
 
 /*
@@ -536,49 +533,90 @@ function updateMap(lat, lon) {
  ***************************************************************/
 async function fetchWeather(lat, lon) {
   const apiKey = "2c523879d607be23b14fabb202cce5bc";
-  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`;
+  // Use One Call API to get current, hourly, and daily data
+  const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&units=imperial&exclude=minutely,alerts&appid=${apiKey}`;
+  
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Weather API response not OK.");
     const data = await response.json();
+    console.log("One Call API Data:", data); // Debug log to inspect structure
 
-    // Update Weather Summary Module
-    document.getElementById("weatherDesc").textContent = data.weather[0].description;
-    document.getElementById("weatherTemp").textContent = data.main.temp.toFixed(1);
+    // Update current weather summary
+    const weatherDescEl = document.getElementById("weatherDesc");
+    const weatherTempEl = document.getElementById("weatherTemp");
+    if (weatherDescEl) weatherDescEl.textContent = data.current.weather[0].description;
+    if (weatherTempEl) weatherTempEl.textContent = data.current.temp.toFixed(1);
 
-    // Update Detailed Weather Module
+    // Update detailed weather module with current details
     if (document.getElementById("detailedTemp"))
-      document.getElementById("detailedTemp").textContent = data.main.temp.toFixed(1);
+      document.getElementById("detailedTemp").textContent = data.current.temp.toFixed(1);
     if (document.getElementById("feelsLike"))
-      document.getElementById("feelsLike").textContent = data.main.feels_like.toFixed(1);
-    if (document.getElementById("tempMin"))
-      document.getElementById("tempMin").textContent = data.main.temp_min.toFixed(1);
-    if (document.getElementById("tempMax"))
-      document.getElementById("tempMax").textContent = data.main.temp_max.toFixed(1);
+      document.getElementById("feelsLike").textContent = data.current.feels_like.toFixed(1);
     if (document.getElementById("pressure"))
-      document.getElementById("pressure").textContent = data.main.pressure;
+      document.getElementById("pressure").textContent = data.current.pressure;
     if (document.getElementById("humidity"))
-      document.getElementById("humidity").textContent = data.main.humidity;
+      document.getElementById("humidity").textContent = data.current.humidity;
     if (document.getElementById("visibility"))
-      document.getElementById("visibility").textContent = data.visibility;
+      document.getElementById("visibility").textContent = data.current.visibility || "--";
 
     // Update Wind Module
     if (document.getElementById("windSpeed"))
-      document.getElementById("windSpeed").textContent = data.wind.speed;
+      document.getElementById("windSpeed").textContent = data.current.wind_speed;
     if (document.getElementById("windDirection"))
-      document.getElementById("windDirection").textContent = data.wind.deg;
+      document.getElementById("windDirection").textContent = data.current.wind_deg;
 
-    // Update Sunrise/Sunset Module (convert UNIX timestamps to local time)
+    // Update Sunrise/Sunset Module
     if (document.getElementById("sunriseTime"))
-      document.getElementById("sunriseTime").textContent = convertTimestamp(data.sys.sunrise);
+      document.getElementById("sunriseTime").textContent = convertTimestamp(data.current.sunrise);
     if (document.getElementById("sunsetTime"))
-      document.getElementById("sunsetTime").textContent = convertTimestamp(data.sys.sunset);
-      
+      document.getElementById("sunsetTime").textContent = convertTimestamp(data.current.sunset);
+
+    // Update Hourly Forecast Module: Display the next 12 hours
+    if (document.getElementById("hourlyForecast")) {
+      const hourlyEl = document.getElementById("hourlyForecast");
+      hourlyEl.innerHTML = "";
+      data.hourly.slice(0, 12).forEach(hourData => {
+        const hour = new Date(hourData.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const temp = hourData.temp.toFixed(0);
+        // Use HTTPS for the icon URL to avoid mixed-content issues:
+        const iconUrl = `https://openweathermap.org/img/wn/${hourData.weather[0].icon}@2x.png`;
+        hourlyEl.innerHTML += `
+          <div class="hourly-block">
+            <p>${hour}</p>
+            <img src="${iconUrl}" alt="${hourData.weather[0].description}" />
+            <p>${temp}°F</p>
+          </div>
+        `;
+      });
+    }
+
+    // Update 7-Day Forecast Module
+    if (document.getElementById("dailyForecast")) {
+      const dailyEl = document.getElementById("dailyForecast");
+      dailyEl.innerHTML = "";
+      data.daily.slice(0, 7).forEach(dayData => {
+        const dayName = new Date(dayData.dt * 1000).toLocaleDateString([], { weekday: 'short' });
+        const iconUrl = `https://openweathermap.org/img/wn/${dayData.weather[0].icon}@2x.png`;
+        const minTemp = dayData.temp.min.toFixed(0);
+        const maxTemp = dayData.temp.max.toFixed(0);
+        dailyEl.innerHTML += `
+          <div class="daily-block">
+            <p>${dayName}</p>
+            <img src="${iconUrl}" alt="${dayData.weather[0].description}" />
+            <p>${minTemp}°F / ${maxTemp}°F</p>
+          </div>
+        `;
+      });
+    }
+
   } catch (err) {
     console.error("Error fetching weather:", err);
     // Set default values in case of error
-    if (document.getElementById("weatherDesc")) document.getElementById("weatherDesc").textContent = "N/A";
-    if (document.getElementById("weatherTemp")) document.getElementById("weatherTemp").textContent = "--";
+    if (document.getElementById("weatherDesc"))
+      document.getElementById("weatherDesc").textContent = "N/A";
+    if (document.getElementById("weatherTemp"))
+      document.getElementById("weatherTemp").textContent = "--";
   }
 }
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta charset="UTF-8" />
+  <title>Modular Geolocation App (Config-Driven)</title>
+
+  <!-- Plotly (for Speed & Heading Gauges) -->
+  <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+
+  <!-- Leaflet (for Map) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- CONNECT OVERLAY -->
+  <div id="connectOverlay">
+    <button id="connectBtn">Connect</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="appContainer">
+    <header>
+      <h1>Modular Geolocation App</h1>
+      <button id="optionsBtn">Options</button>
+    </header>
+
+    <!-- OPTIONS MENU (TOGGLES) -->
+    <div id="optionsMenu">
+      <!-- We'll programmatically fill in toggles here -->
+    </div>
+
+    <!-- This container will hold all dynamically added modules -->
+    <div id="modulesContainer"></div>
+  </div>
+
+  <!-- Main JS -->
+  <script src="app.js"></script>
+</body>
+</html>
