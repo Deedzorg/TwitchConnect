@@ -118,38 +118,15 @@ const MODULE_DEFINITIONS = [
     defaultVisible: false,
     render(containerEl) {
       containerEl.innerHTML = `
-        <div id="headingTapeWindow" style="width:360px;height:80px;position:relative;overflow:hidden;background:#222;border-radius:6px;box-shadow:0 2px 5px rgba(0,0,0,0.5);">
-          <div id="headingTape" style="
-            position:absolute;
-            top:0;
-            left:0;
-            height:80px;
-            width:7200px;
-            display:flex;
-            align-items:center;
-            transition: transform 0.5s ease-out;
-          ">
-            ${Array.from({length: 360}, (_, i) => `
-              <div style="width:20px;height:80px;flex-shrink:0;text-align:center;color:#0ff;font-size:12px;font-family:sans-serif;">
-                <div style="height:40px;border-left:1px solid #0ff;margin:auto;"></div>
-                <span>${i % 30 === 0 ? i : ''}</span>
-              </div>`).join('')}
-          </div>
-          <div style="
-            position:absolute;
-            left:50%;
-            top:0;
-            transform:translateX(-50%);
-            width:2px;
-            height:100%;
-            background:#f00;
-            box-shadow:0 0 5px rgba(255,0,0,0.7);
-          "></div>
+        <div id="headingTapeWindow" style="width:360px;height:60px;position:relative;overflow:hidden;">
+          <div id="headingTape" style="position:absolute;top:0;left:0;width:2000px;height:60px;
+            background: repeating-linear-gradient(to right, #333 0px, #333 9px, #0ff 10px,
+            #333 11px, #333 19px, #0ff 20px, #333 21px, #333 29px, #0ff 30px);"></div>
+          <div class="tape-marker" style="position:absolute;left:50%;top:0;width:2px;height:60px;background:red;"></div>
         </div>
       `;
     }
   },
-  
   {
     id: "mapModule",
     title: "Map",
@@ -159,7 +136,6 @@ const MODULE_DEFINITIONS = [
       initMap();
     }
   },
-
 /*
   {
     id: "hourlyForecastModule",
@@ -526,13 +502,10 @@ function createHeadingGauge(initialValue) {
       headingGaugeChart = chart;
     });
 }
-function updateHeadingTape(deg) {
-  const tapeEl = document.getElementById("headingTape");
-  if (!tapeEl) return;
-  const offset = deg * 20 - (180 * 20); // each degree is 20px wide
-  tapeEl.style.transform = `translateX(${-offset}px)`;
+function updateHeadingGauge(deg) {
+  if (!headingGaugeChart) return;
+  Plotly.update("headingGauge", { value: [deg] }, {}, [0]);
 }
-
 
 /***************************************************************
  * HEADING TAPE
