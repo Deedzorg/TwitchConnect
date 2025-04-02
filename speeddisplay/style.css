@@ -255,47 +255,204 @@ header h1 {
   height: 320px;
 }
 
-/* HEADING TAPE */
+/* HEADING TAPE CONTAINER */
 #headingTapeContainer {
   width: 360px;
   height: 80px;
   position: relative;
   overflow: hidden;
   margin: 1rem auto;
-}
-#headingTapeWindow {
   background: linear-gradient(#111, #222);
-  overflow: hidden;
   border: 2px solid #0ff;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
 }
 
-#headingTape div {
-  box-sizing: border-box;
+/* HEADING TAPE WINDOW */
+#headingTapeWindow {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
-#headingTape div span {
+/* HEADING TAPE ITSELF */
+#headingTape {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transform: translateX(-50%);
+  transition: transform 0.4s ease-out;
+}
+
+/* INDIVIDUAL TAPE SEGMENTS */
+#headingTape .tape-segment {
+  width: 20px;
+  height: 100%;
+  flex-shrink: 0;
+  text-align: center;
+  color: #0ff;
+  font-size: 13px;
+  font-family: sans-serif;
+  position: relative;
+}
+
+#headingTape .tape-segment::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 50%;
+  border-left: 2px solid #0ff;
+  transform: translateX(-50%);
+}
+
+#headingTape .tape-segment span {
   display: block;
-  margin-top: 4px;
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
   color: #fff;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
-.tape-marker {
-  background: #ff0000;
-  box-shadow: 0 0 10px rgba(255,0,0,0.8);
-}
-
-
+/* CENTER MARKER LINE */
 .tape-marker {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 2px;
-  height: 80px;
+  width: 3px;
+  height: 100%;
   background: #f00;
+  box-shadow: 0 0 12px rgba(255,0,0,0.8);
+  z-index: 10;
 }
+/* Stopwatch Styling */
+.stopwatch-container {
+  background: #222;
+  border-radius: 8px;
+  border: 2px solid #0ff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+.stopwatch-container button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background-color: #0ff;
+  color: #000;
+  transition: background-color 0.3s;
+}
+
+.stopwatch-container button:hover {
+  background-color: #0cc;
+}
+
+#stopwatchDisplay {
+  font-size: 2rem;
+  font-family: monospace;
+  color: #0ff;
+}
+#lapTimes {
+  padding: 0.5rem;
+  border-top: 1px solid #555;
+  background-color: #111;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}.timer-container {
+  background: #222;
+  border-radius: 8px;
+  border: 2px solid #0ff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+}
+
+.timer-container input {
+  border-radius: 5px;
+  border: none;
+  background-color: #fff;
+  color: #000;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.timer-container button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background-color: #0ff;
+  color: #000;
+  transition: background-color 0.3s;
+  margin: 0.2rem;
+}
+
+.timer-container button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.timer-container button:hover:not(:disabled) {
+  background-color: #0cc;
+}
+
+#timerDisplay {
+  font-family: monospace;
+}
+
+.timer-manager {
+  background: #222;
+  border-radius: 8px;
+  border: 2px solid #0ff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+}
+
+.timer-manager input {
+  border-radius: 5px;
+  border: none;
+  background-color: #fff;
+  color: #000;
+  text-align: center;
+}
+
+.timer-manager button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background-color: #0ff;
+  color: #000;
+  transition: background-color 0.3s;
+  margin: 0.2rem;
+}
+
+.timer-manager button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.timer-manager button:hover:not(:disabled) {
+  background-color: #0cc;
+}
+
+.timer-instance {
+  position: relative;
+}
+
+.timer-instance strong {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
 
 /* MAP */
 #mapContainer {

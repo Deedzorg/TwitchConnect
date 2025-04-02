@@ -112,6 +112,325 @@ const MODULE_DEFINITIONS = [
       createHeadingGauge(0);
     }
   },
+
+  {
+    id: "headingTapeModule",
+    title: "Aviation-Style Heading Tape",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div id="headingTapeContainer">
+          <div id="headingTapeWindow">
+            <div id="headingTape">
+              ${Array.from({length: 360}, (_, deg) => `
+                <div class="tape-segment">
+                  ${deg % 30 === 0 ? `<span>${deg}</span>` : ''}
+                </div>
+              `).join('')}
+            </div>
+            <div class="tape-marker"></div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    id: "timerManagerModule",
+    title: "Timers",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div class="timer-manager" style="padding:1rem;">
+          <input id="timerName" placeholder="Timer Name" style="padding:4px;margin-bottom:4px;width:100%;">
+          <div style="margin-bottom:8px;">
+            <input id="timerHours" type="number" min="0" placeholder="HH" style="width:60px;padding:4px;margin:4px;">
+            <input id="timerMinutes" type="number" min="0" max="60" placeholder="MM" style="width:60px;padding:4px;margin:4px;">
+            <input id="timerSeconds" type="number" min="0" max="60" placeholder="SS" style="width:60px;padding:4px;margin:4px;">
+          </div>
+          <button id="addTimerBtn">Add Timer</button>
+          <div id="activeTimers" style="margin-top:1rem;"></div>
+        </div>
+      `;
+  
+      const nameInput = containerEl.querySelector("#timerName");
+      const hoursInput = containerEl.querySelector("#timerHours");
+      const minutesInput = containerEl.querySelector("#timerMinutes");
+      const secondsInput = containerEl.querySelector("#timerSeconds");
+      const addTimerBtn = containerEl.querySelector("#addTimerBtn");
+      const activeTimersEl = containerEl.querySelector("#activeTimers");
+  
+      function formatTime(seconds) {
+        const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${hrs}:${mins}:${secs}`;
+      }
+  
+      function createTimer(name, totalSecs) {
+        const timerEl = document.createElement('div');
+        timerEl.className = 'timer-instance';
+        timerEl.style = 'margin-top:1rem;padding:0.5rem;background:#333;border-radius:5px;border:1px solid #0ff;';
+  
+        timerEl.innerHTML = `
+          <strong style="color:#0ff;">${name}</strong>
+          <div class="timer-display" style="font-size:1.5rem;color:#fff;">${formatTime(totalSecs)}</div>
+          <button class="Start-btn">Start</button>
+          <button class="Stop-btn" disabled>Cancel</button>
+          <button class="X-btn">Remove</button>
+          <audio loop>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+          </audio>
+        `;
+  
+        activeTimersEl.prepend(timerEl);
+  
+        const displayEl = timerEl.querySelector('.timer-display');
+        const startBtn = timerEl.querySelector('.start-btn');
+        const cancelBtn = timerEl.querySelector('.cancel-btn');
+        const removeBtn = timerEl.querySelector('.remove-btn');
+        const alarmAudio = timerEl.querySelector('audio');
+  
+        let remainingTime = totalSecs, timerInterval;
+  
+        startBtn.onclick = () => {
+          startBtn.disabled = true;
+          cancelBtn.disabled = false;
+  
+          timerInterval = setInterval(() => {
+            remainingTime--;
+            displayEl.textContent = formatTime(remainingTime);
+            if (remainingTime <= 0) {
+              clearInterval(timerInterval);
+              alarmAudio.play();
+            }
+          }, 1000);
+        };
+  
+        cancelBtn.onclick = () => {
+          clearInterval(timerInterval);
+          alarmAudio.pause();
+          alarmAudio.currentTime = 0;
+          remainingTime = totalSecs;
+          displayEl.textContent = formatTime(totalSecs);
+          startBtn.disabled = false;
+          cancelBtn.disabled = true;
+        };
+  
+        removeBtn.onclick = () => {
+          clearInterval(timerInterval);
+          alarmAudio.pause();
+          timerEl.remove();
+        };
+      }
+  
+      addTimerBtn.onclick = () => {
+        const name = nameInput.value.trim() || `Timer ${new Date().toLocaleTimeString()}`;
+        const hrs = parseInt(hoursInput.value, 10) || 0;
+        const mins = Math.min(parseInt(minutesInput.value, 10) || 0, 60);
+        const secs = Math.min(parseInt(secondsInput.value, 10) || 0, 60);
+        const totalSecs = hrs * 3600 + mins * 60 + secs;
+  
+        if (totalSecs <= 0) {
+          alert("Please enter a valid timer duration.");
+          return;
+        }
+  
+        createTimer(name, totalSecs);
+  
+        nameInput.value = '';
+        hoursInput.value = '';
+        minutesInput.value = '';
+        secondsInput.value = '';
+      };
+    }
+  }  
+,  
+  {
+    id: "timerModule",
+    title: "Countdown Timer",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div class="timer-container" style="text-align:center;padding:1rem;">
+          <div style="margin-bottom:0.5rem;">
+            <input id="timerHours" type="number" min="0" placeholder="HH" style="width:60px;padding:4px;margin:0 4px;">
+            <input id="timerMinutes" type="number" min="0" placeholder="MM" style="width:60px;padding:4px;margin:0 4px;">
+            <input id="timerSeconds" type="number" min="0" placeholder="SS" style="width:60px;padding:4px;margin:0 4px;">
+          </div>
+          <button id="startTimer">Start</button>
+          <button id="cancelTimer" disabled>Cancel</button>
+          <div id="timerDisplay" style="font-size:2rem;margin-top:1rem;color:#0ff;">00:00:00</div>
+          <audio id="timerAlarm" loop>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+          </audio>
+        </div>
+      `;
+  
+      const hoursInput = containerEl.querySelector("#timerHours");
+      const minutesInput = containerEl.querySelector("#timerMinutes");
+      const secondsInput = containerEl.querySelector("#timerSeconds");
+      const startBtn = containerEl.querySelector("#startTimer");
+      const cancelBtn = containerEl.querySelector("#cancelTimer");
+      const displayEl = containerEl.querySelector("#timerDisplay");
+      const alarmAudio = containerEl.querySelector("#timerAlarm");
+  
+      let timerInterval;
+      let remainingTime;
+  
+      function updateDisplay(totalSecs) {
+        const hours = Math.floor(totalSecs / 3600).toString().padStart(2, '0');
+        const mins = Math.floor((totalSecs % 3600) / 60).toString().padStart(2, '0');
+        const secs = (totalSecs % 60).toString().padStart(2, '0');
+        displayEl.textContent = `${hours}:${mins}:${secs}`;
+      }
+  
+      function startCountdown(duration) {
+        clearInterval(timerInterval);
+        remainingTime = duration;
+        updateDisplay(remainingTime);
+        cancelBtn.disabled = false;
+        startBtn.disabled = true;
+  
+        timerInterval = setInterval(() => {
+          remainingTime--;
+          updateDisplay(remainingTime);
+  
+          if (remainingTime <= 0) {
+            clearInterval(timerInterval);
+            alarmAudio.play();
+            cancelBtn.disabled = false;
+            startBtn.disabled = false;
+          }
+        }, 1000);
+      }
+  
+      startBtn.onclick = () => {
+        const hours = parseInt(hoursInput.value, 10) || 0;
+        const mins = parseInt(minutesInput.value, 10) || 0;
+        const secs = parseInt(secondsInput.value, 10) || 0;
+        const totalSecs = hours * 3600 + mins * 60 + secs;
+  
+        if (totalSecs <= 0) {
+          alert("Please enter a valid time.");
+          return;
+        }
+  
+        startCountdown(totalSecs);
+      };
+  
+      cancelBtn.onclick = () => {
+        clearInterval(timerInterval);
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+        updateDisplay(0);
+        startBtn.disabled = false;
+        cancelBtn.disabled = true;
+      };
+    }
+  }  
+,  
+  {
+    id: "stopwatchModule",
+    title: "Stopwatch & Lap Timer",
+    defaultVisible: false,
+    render(containerEl) {
+      containerEl.innerHTML = `
+        <div class="stopwatch-container" style="text-align:center;padding:1rem;">
+          <div id="stopwatchDisplay" style="font-size:2rem;font-family:monospace;color:#0ff;">00:00:00.0</div>
+          <div style="margin-top:1rem;">
+            <button id="startStopwatch">Start/Lap</button>
+            <button id="stopStopwatch">Stop</button>
+            <button id="resetStopwatch">Reset</button>
+          </div>
+          <div id="lapTimes" style="margin-top:1rem;text-align:left;"></div>
+        </div>
+      `;
+  
+      let stopwatchInterval = null;
+      let startTime = 0;
+      let elapsed = 0;
+      let running = false;
+      let lapCount = 0;
+      let laps = [];
+  
+      const maxLaps = 5;
+  
+      const displayEl = containerEl.querySelector("#stopwatchDisplay");
+      const startBtn = containerEl.querySelector("#startStopwatch");
+      const stopBtn = containerEl.querySelector("#stopStopwatch");
+      const resetBtn = containerEl.querySelector("#resetStopwatch");
+      const lapTimesEl = containerEl.querySelector("#lapTimes");
+  
+      function updateDisplay(ms) {
+        const totalSecs = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSecs / 3600).toString().padStart(2, '0');
+        const mins = Math.floor((totalSecs % 3600) / 60).toString().padStart(2, '0');
+        const secs = (totalSecs % 60).toString().padStart(2, '0');
+        const tenths = Math.floor((ms % 1000) / 100);
+        displayEl.textContent = `${hours}:${mins}:${secs}.${tenths}`;
+      }
+  
+      function renderLaps() {
+        lapTimesEl.innerHTML = '';
+        laps.forEach((lap, idx) => {
+          const lapEl = document.createElement('div');
+          lapEl.textContent = `Lap ${lap.number}: ${lap.time}`;
+          lapEl.style.color = '#0ff';
+          lapEl.style.fontFamily = 'monospace';
+          lapTimesEl.appendChild(lapEl);
+        });
+      }
+  
+      function recordLap(ms) {
+        lapCount += 1;
+        const totalSecs = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSecs / 3600).toString().padStart(2, '0');
+        const mins = Math.floor((totalSecs % 3600) / 60).toString().padStart(2, '0');
+        const secs = (totalSecs % 60).toString().padStart(2, '0');
+        const tenths = Math.floor((ms % 1000) / 100);
+        const lapTime = `${hours}:${mins}:${secs}.${tenths}`;
+  
+        if (laps.length >= maxLaps) {
+          laps.shift();  // Remove oldest lap
+        }
+  
+        laps.push({ number: lapCount, time: lapTime });
+        renderLaps();
+      }
+  
+      startBtn.onclick = () => {
+        if (running) {
+          recordLap(elapsed);
+          return;
+        }
+        running = true;
+        startTime = Date.now() - elapsed;
+        stopwatchInterval = setInterval(() => {
+          elapsed = Date.now() - startTime;
+          updateDisplay(elapsed);
+        }, 100);
+      };
+  
+      stopBtn.onclick = () => {
+        if (!running) return;
+        running = false;
+        clearInterval(stopwatchInterval);
+      };
+  
+      resetBtn.onclick = () => {
+        running = false;
+        clearInterval(stopwatchInterval);
+        elapsed = 0;
+        lapCount = 0;
+        laps = [];
+        lapTimesEl.innerHTML = '';
+        updateDisplay(elapsed);
+      };
+    }
+  },
+  
+  
+/*  
   {
     id: "headingTapeModule",
     title: "Aviation-Style Heading Tape",
@@ -126,7 +445,7 @@ const MODULE_DEFINITIONS = [
         </div>
       `;
     }
-  },
+  },*/
   {
     id: "mapModule",
     title: "Map",
@@ -513,9 +832,21 @@ function updateHeadingGauge(deg) {
 function updateHeadingTape(deg) {
   const tapeEl = document.getElementById("headingTape");
   if (!tapeEl) return;
-  tapeEl.style.transform = `translateX(-${deg * HEADING_TAPE_SCALE}px)`;
+
+  const pixelsPerDegree = 20; // matches CSS segment width
+  const offset = deg * pixelsPerDegree;
+
+  tapeEl.style.transform = `translateX(${-offset}px)`;
 }
 
+
+/*
+function updateHeadingTape(deg) {
+  const tapeEl = document.getElementById("headingTape");
+  if (!tapeEl) return;
+  tapeEl.style.transform = `translateX(-${deg * HEADING_TAPE_SCALE}px)`;
+}
+*/
 /***************************************************************
  * MAP (Leaflet)
  ***************************************************************/
