@@ -134,6 +134,9 @@ const MODULE_DEFINITIONS = [
       `;
     }
   },
+
+
+  
   {
     id: "timerManagerModule",
     title: "Timers",
@@ -174,9 +177,9 @@ const MODULE_DEFINITIONS = [
         timerEl.innerHTML = `
           <strong style="color:#0ff;">${name}</strong>
           <div class="timer-display" style="font-size:1.5rem;color:#fff;">${formatTime(totalSecs)}</div>
-          <button class="Start-btn">Start</button>
-          <button class="Stop-btn" disabled>Cancel</button>
-          <button class="X-btn">Remove</button>
+          <button class="start-btn">Start</button>
+          <button class="cancel-btn" disabled>Cancel</button>
+          <button class="remove-btn">Remove</button>
           <audio loop>
             <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
           </audio>
