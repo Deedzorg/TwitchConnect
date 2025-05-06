@@ -318,11 +318,15 @@ button {
 }
 
 
+
 .chat-header a {
-  color: lime !important; /* Bright color */
-  text-decoration: underline !important; /* Ensure underline */
-  border: 1px dashed red !important; /* See its boundaries */
-  font-weight: bold !important;
+  color: inherit; /* Inherit color from parent (will be white) */
+  text-decoration: none; /* No underline by default */
+  /* display: block; is set in JS, which is fine */
+}
+
+.chat-header a:hover h4 { /* Target the h4 text on hover */
+  color: #6495ED; /* Cornflower blue, or any blue you prefer */
 }
 
 
