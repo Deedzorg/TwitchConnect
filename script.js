@@ -146,31 +146,37 @@ async function fetchGlobalEmotes() {
     console.error("OAuth token missing in fetchGlobalEmotes");
     return;
   }
+
   try {
     const response = await fetch(`${TWITCH_API_BASE}/chat/emotes/global`, {
       headers: {
         'Client-ID': clientId,
-        'Authorization': `Bearer ${oauthToken}` // Use cached token
+        'Authorization': `Bearer ${oauthToken}`
       }
     });
+
     const data = await response.json();
     console.log('Global Emotes API Response:', data);
 
     if (!response.ok) {
       throw new Error(`Error fetching global emotes: ${data.message} (Status: ${response.status})`);
     }
+
     if (!data.data) {
       throw new Error('Unexpected API response structure for global emotes');
     }
 
+    // ✅ Correct scope
     data.data.forEach(emote => {
-      globalEmotes[emote.name] = emote.images.url_1x;
+      globalEmotes[emote.name] = emote.images.url_2x || emote.images.url_1x;
     });
 
   } catch (error) {
     console.error(error);
   }
 }
+
+
 
 async function getBroadcasterId(channelName) {
   if (!oauthToken) {
