@@ -318,6 +318,15 @@ button {
 }
 
 
+.chat-header a {
+  color: lime !important; /* Bright color */
+  text-decoration: underline !important; /* Ensure underline */
+  border: 1px dashed red !important; /* See its boundaries */
+  font-weight: bold !important;
+}
+
+
+
 
 /* --- Mobile-Specific Styles --- */
 @media (max-width: 768px) {

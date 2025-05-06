@@ -1,9 +1,13 @@
 // --- Global Configuration ---
 const clientId = '1cvmce5wrxeuk4hpfgd4ssfthiwx46'; // Replace With Your Client ID 
 const redirectURI = 'https://deedzorg.github.io/TwitchConnect/callback.html';
+const TWITCH_API_BASE = 'https://api.twitch.tv/helix';
+const TWITCH_WS_URL = "wss://irc-ws.chat.twitch.tv:443";
+const CHAT_BOX_WIDTH = 340; // approximate width (chat box width + gap)
+
 // --- Global Variables ---        
 let username = null; // This will be set when fetching user data
-let oauthToken = null; // Declare it globally
+let oauthToken = localStorage.getItem('twitchAccessToken'); // Fetch token once
 
 // Global variables to store badges and emotes  
 let globalBadges = {};
@@ -13,6 +17,11 @@ let trackedChannels = [];
 let liveChannelsStatus = {}; // Key: channel, Value: boolean (true if live)
 let channelPictures = {};
 let currentSlide = 0;
+
+// --- DOM Element Cache --- (Example, add more as needed)
+let chatContainer = null;
+let loginBtn = null;
+let logoutBtn = null;
 
 // Initialize the application by fetching global badges and emotes
 async function initApp() {
@@ -26,30 +35,19 @@ async function initApp() {
 document.addEventListener("DOMContentLoaded", () => {
 
   const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
+  logoutBtn = document.getElementById("logoutBtn"); // Assign to cached variable
  
   // Define chatContainer globally
-  window.chatContainer = document.getElementById("chat-container");
-  if (!window.chatContainer) {
+  chatContainer = document.getElementById("chat-container"); // Assign to cached variable
+  if (!chatContainer) {
     console.error("chatContainer is missing from the DOM.");
     return;
   }
-
-  storedOauthToken = localStorage.getItem('twitchAccessToken');
-  oauthToken = localStorage.getItem('twitchAccessToken');
+  window.chatContainer = chatContainer; // Keep global if needed elsewhere, but prefer passing as arg
 
   if (!oauthToken) {
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
-
-   /* window.location.href = 'https://id.twitch.tv/oauth2/authorize?' +
-      new URLSearchParams({
-        
-        client_id: clientId,
-        redirect_uri: 'https://deedzorg.github.io/TwitchConnect/callback.html',
-        response_type: 'token',
-        scope: 'user:read:email chat:read chat:edit'
-      });*/
 
   } else {
     loginBtn.style.display = "none";
@@ -57,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch('https://api.twitch.tv/helix/users', {
       headers: {
         'Client-ID': clientId,
-        'Authorization': `Bearer ${oauthToken}`
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
       }
     })
     .then(response => response.json())
@@ -79,14 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function fetchGlobalBadges() {
-  const token = oauthToken || localStorage.getItem('twitchAccessToken');
-  if (!token) {
+  if (!oauthToken) {
     console.error("OAuth token missing in fetchGlobalBadges");
     return;
   }
 
   try {
-    const response = await fetch("https://api.twitch.tv/helix/chat/badges/global", {
+    const response = await fetch(`${TWITCH_API_BASE}/chat/badges/global`, {
       headers: {
         "Authorization": `Bearer ${token}`,
         "Client-Id": clientId
@@ -146,21 +143,27 @@ function toggleEmotePicker(context) {
 
 // --- Global API functions ---
 async function fetchGlobalEmotes() {
-  const response = await fetch('https://api.twitch.tv/helix/chat/emotes/global', {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
-    }
-  });
-  const data = await response.json();
-  console.log('Global Emotes API Response:', data);
-  if (!response.ok) {
-    console.error(`Error fetching global emotes: ${data.message} (Status: ${response.status})`);
+  if (!oauthToken) {
+    console.error("OAuth token missing in fetchGlobalEmotes");
     return;
   }
-  if (!data.data) {
-    console.error('Unexpected API response structure for global emotes:', data);
-    return;
+  try {
+    const response = await fetch(`${TWITCH_API_BASE}/chat/emotes/global`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
+      }
+    });
+    const data = await response.json();
+    console.log('Global Emotes API Response:', data);
+    if (!response.ok) {
+      throw new Error(`Error fetching global emotes: ${data.message} (Status: ${response.status})`);
+    }
+    if (!data.data) {
+      throw new Error('Unexpected API response structure for global emotes');
+    }
+  } catch (error) {
+    console.error(error);
   }
   data.data.forEach(emote => {
     globalEmotes[emote.name] = emote.images.url_1x;
@@ -168,75 +171,100 @@ async function fetchGlobalEmotes() {
 }
 
 async function getBroadcasterId(channelName) {
-  const response = await fetch(`https://api.twitch.tv/helix/users?login=${channelName}`, {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
-    }
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    console.error(`Error fetching user ID: ${data.message} (Status: ${response.status})`);
+  if (!oauthToken) {
+    console.error("OAuth token missing in getBroadcasterId");
     return null;
   }
-  if (data.data && data.data.length > 0) {
-    return data.data[0].id;
-  } else {
+  try {
+    const response = await fetch(`${TWITCH_API_BASE}/users?login=${channelName}`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
+      }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Error fetching user ID for ${channelName}: ${data.message} (Status: ${response.status})`);
+    }
+    if (data.data && data.data.length > 0) {
+      return data.data[0].id;
+    } else {
+      console.warn(`Broadcaster ID not found for ${channelName}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(error);
     return null;
   }
 }
 
 async function fetchChannelBadges(broadcasterId) {
-  const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
-    }
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    console.error(`Error fetching channel badges: ${data.message} (Status: ${response.status})`);
+  if (!oauthToken) {
+    console.error("OAuth token missing in fetchChannelBadges");
     return {};
   }
-  const channelBadges = {};
-  data.data.forEach(set => {
-    channelBadges[set.set_id] = {};
-    set.versions.forEach(version => {
-      channelBadges[set.set_id][version.id] = version.image_url_1x;
+  try {
+    const response = await fetch(`${TWITCH_API_BASE}/chat/badges?broadcaster_id=${broadcasterId}`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
+      }
     });
-  });
-  return channelBadges;
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Error fetching channel badges for ${broadcasterId}: ${data.message} (Status: ${response.status})`);
+    }
+    const channelBadges = {};
+    data.data.forEach(set => {
+      channelBadges[set.set_id] = {};
+      set.versions.forEach(version => {
+        channelBadges[set.set_id][version.id] = version.image_url_1x;
+      });
+    });
+    return channelBadges;
+  } catch (error) {
+    console.error(error);
+    return {};
+  }
 }
 
 async function fetchChannelEmotes(broadcasterId) {
-  const response = await fetch(`https://api.twitch.tv/helix/chat/emotes?broadcaster_id=${broadcasterId}`, {
-    headers: {
-      'Client-ID': clientId,
-      'Authorization': `Bearer ${storedOauthToken || oauthToken}`
-    }
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    console.error(`Error fetching channel emotes: ${data.message} (Status: ${response.status})`);
+  if (!oauthToken) {
+    console.error("OAuth token missing in fetchChannelEmotes");
     return {};
   }
+  try {
+    const response = await fetch(`${TWITCH_API_BASE}/chat/emotes?broadcaster_id=${broadcasterId}`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
+      }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Error fetching channel emotes for ${broadcasterId}: ${data.message} (Status: ${response.status})`);
+    }
   const channelEmotes = {};
   data.data.forEach(emote => {
     channelEmotes[emote.name] = emote.images.url_1x;
   });
   return channelEmotes;
+} catch (error) {
+  console.error(error);
+  return {};
+}
 }
 
 
 function slideChats(direction) {
   const container = document.getElementById("chat-container");
   const chatBoxes = container.children;
-  const chatBoxWidth = 340; // approximate width (chat box width + gap)
+  // Use constant
   const maxSlide = Math.max(0, chatBoxes.length - 2); // show two at a time
   currentSlide += direction;
   if (currentSlide < 0) currentSlide = 0;
   if (currentSlide > maxSlide) currentSlide = maxSlide;
-  container.style.transform = `translateX(-${currentSlide * chatBoxWidth}px)`;
+  container.style.transform = `translateX(-${currentSlide * CHAT_BOX_WIDTH}px)`;
 }
 
 // --- GLOBAL MESSAGE FUNCTIONALITY ---
@@ -283,38 +311,42 @@ async function fetchChannelPicture(channel) {
       return channelPictures[channel];
     }
     //check if we are already trying to get the picture
-      if (channelPictures[`${channel}-loading`]) {
-      return null; // fallback if not found
-      }
-      channelPictures[`${channel}-loading`] = true;
+    // Simplified loading check: if value is explicitly 'loading', wait.
+    if (channelPictures[channel] === 'loading') {
+        // Optionally, wait for the fetch to complete using a Promise stored elsewhere
+        console.log(`Already fetching picture for ${channel}`);
+        return null; // Or return a placeholder/promise
+    }
+    channelPictures[channel] = 'loading'; // Mark as loading
       
-    const response = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+    // Use constant for base URL
+    const response = await fetch(`${TWITCH_API_BASE}/users?login=${channel}`, {
       headers: {
         'Client-ID': clientId,
-        'Authorization': `Bearer ${storedOauthToken || oauthToken}`
+        'Authorization': `Bearer ${oauthToken}` // Use cached token
       }
     });
     if (!response.ok) {
       console.error(`Error fetching user data for ${channel}: ${response.status} - ${response.statusText}`);
         channelPictures[channel] = null; // clear the cache on error
-      delete channelPictures[`${channel}-loading`];
+      // No need to delete loading flag, just set to null
       return null; // fallback if not found
     }
     const data = await response.json();
     if (data.data && data.data.length > 0) {
       const imgUrl = data.data[0].profile_image_url;
       channelPictures[channel] = imgUrl; // Cache it
-      console.log(`Picture fetched and cached for ${channel}: ${imgUrl}`); // Debugging log
-      delete channelPictures[`${channel}-loading`];
+      console.log(`Picture fetched and cached for ${channel}: ${imgUrl}`);
+      // No need to delete loading flag
       return imgUrl;
     }
         console.log(`No user data found for ${channel}`); // Debugging log
         channelPictures[channel] = null; // clear the cache on error
-        delete channelPictures[`${channel}-loading`];
+        // No need to delete loading flag
         return null; // fallback if not found
   } catch (error) {
       console.error(`Error fetching user data for ${channel}`, error);
-      channelPictures[channel] = null; // clear the cache on error
+      channelPictures[channel] = null; // Set to null on error
       delete channelPictures[`${channel}-loading`];
       return null; // fallback if not found
   }
@@ -413,12 +445,23 @@ async function addChat(providedChannel) {
     chatBox.dataset.channel = channel;
     chatBox.combinedEmotes = combinedEmotes;
   
+
     // Chat header
     const header = document.createElement("div");
     header.className = "chat-header";
+
+    // Create a link for the channel title
+    const titleLink = document.createElement("a");
+    titleLink.href = `https://www.twitch.tv/${channel}`; // Link to the Twitch channel
+    titleLink.target = "_blank"; // Open in a new tab
+    titleLink.style.textDecoration = "none"; // Optional: remove underline
+    titleLink.style.color = "inherit"; // Optional: inherit color from parent
+    titleLink.style.display = 'block'; // Make the anchor a block element
+
     const title = document.createElement("h4");
     title.textContent = `#${channel}`;
-    header.appendChild(title);
+    titleLink.appendChild(title); // Place the h4 inside the link
+    header.appendChild(titleLink); // Add the link (containing the h4) to the header
   
     const closeButton = document.createElement("button");
     closeButton.className = "close-btn";
@@ -529,12 +572,17 @@ async function addChat(providedChannel) {
       .map(channel => `user_login=${encodeURIComponent(channel)}`)
       .join("&");
     
-    const response = await fetch(`https://api.twitch.tv/helix/streams?${query}`, {
+    // Use constant for base URL and add error handling
+    const response = await fetch(`${TWITCH_API_BASE}/streams?${query}`, {
       headers: {
         "Client-ID": clientId,
-        "Authorization": `Bearer ${storedOauthToken || oauthToken}`
+        "Authorization": `Bearer ${oauthToken}` // Use consistent token variable
       }
     });
+    if (!response.ok) {
+        console.error(`Error fetching stream status: ${response.statusText}`);
+        return; // Don't proceed if the API call failed
+    }
     const data = await response.json();
     
     // Reset status for all tracked channels to false
@@ -743,53 +791,22 @@ function removeTrackedChannel(channel) {
 }
 
 function connectToTwitchChat(channel, chatWindow, badges, emotes) {
-  const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+  if (!oauthToken || !username) {
+      console.error(`Cannot connect to #${channel}: Missing OAuth token or username.`);
+      alert(`Authentication error. Cannot connect to #${channel}. Please re-login.`);
+      return null; // Return null or throw error
+  }
+  const socket = new WebSocket(TWITCH_WS_URL); // Use constant
 
   socket.onopen = () => {
     console.log(`✅ Connected to #${channel}`);
     socket.send("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n");
-    socket.send(`PASS oauth:${storedOauthToken || oauthToken}\r\n`);
+    socket.send(`PASS oauth:${oauthToken}\r\n`); // Use consistent token variable
     socket.send(`NICK ${username}\r\n`);
     socket.send(`JOIN #${channel}\r\n`);
   };
   
- 
-
-  function getTwitchUserInfo() {
-    return new Promise((resolve, reject) => {
-        // Simulated Twitch API fetch (replace with real API if available)
-        setTimeout(() => {
-            const userInfo = {
-                display_name: "TwitchUser123",
-                id: "12345678",
-                profile_image_url: "https://static-cdn.jtvnw.net/jtv_user_pictures/...",
-            };
-
-            resolve(userInfo);
-        }, 500);
-    });
-  }
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("script.js loaded.");
-    // Load previous data if it exists
-    window.participants = JSON.parse(localStorage.getItem("participants")) || [];
-    window.leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || {};
-
-    if (typeof getTwitchUserInfo === 'function') {
-        getTwitchUserInfo().then(userInfo => {
-            console.log("Twitch User Info Retrieved:", userInfo);
-            window.currentUser = userInfo.display_name;
-
-            // Store the current user in localStorage
-            localStorage.setItem("currentUser", userInfo.display_name);
-        }).catch(err => console.error("Failed to fetch Twitch user:", err));
-    } else {
-        console.error("Twitch integration not found in script.js");
-    }
-});
-
-// Function to add a participant and save to localStorage
-  
+  // REMOVE second DOMContentLoaded listener and related functions if they belong elsewhere
   socket.onmessage = (event) => {
     console.log(`[${channel}] Received:`, event.data);
   
@@ -802,6 +819,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       console.error('Authentication failed: Invalid OAuth token or username.');
       alert('Authentication failed: Invalid OAuth token or username.');
       socket.close();
+      // Consider triggering logout or token refresh logic here
       return;
     }
   
@@ -809,6 +827,7 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
       console.error('Improperly formatted auth');
       alert('Improperly formatted auth');
       socket.close();
+      // Consider triggering logout or token refresh logic here
       return;
     }
   
@@ -869,9 +888,11 @@ function connectToTwitchChat(channel, chatWindow, badges, emotes) {
     }
   };
   
-  socket.onerror = (error) => console.error(`❌ Error in #${channel}:`, error);
+  socket.onerror = (error) => {
+      console.error(`❌ WebSocket Error in #${channel}:`, error);
+      // Optionally, display an error message in the specific chat window
+  };
   socket.onclose = () => console.log(`🔌 Disconnected from #${channel}`);
   return socket;
   
   }
-
