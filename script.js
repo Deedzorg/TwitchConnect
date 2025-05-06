@@ -141,7 +141,6 @@ function toggleEmotePicker(context) {
   }
 }
 
-// --- Global API functions ---
 async function fetchGlobalEmotes() {
   if (!oauthToken) {
     console.error("OAuth token missing in fetchGlobalEmotes");
@@ -156,18 +155,21 @@ async function fetchGlobalEmotes() {
     });
     const data = await response.json();
     console.log('Global Emotes API Response:', data);
+
     if (!response.ok) {
       throw new Error(`Error fetching global emotes: ${data.message} (Status: ${response.status})`);
     }
     if (!data.data) {
       throw new Error('Unexpected API response structure for global emotes');
     }
+
+    data.data.forEach(emote => {
+      globalEmotes[emote.name] = emote.images.url_1x;
+    });
+
   } catch (error) {
     console.error(error);
   }
-  data.data.forEach(emote => {
-    globalEmotes[emote.name] = emote.images.url_1x;
-  });
 }
 
 async function getBroadcasterId(channelName) {
