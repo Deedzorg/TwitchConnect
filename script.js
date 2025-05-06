@@ -85,7 +85,7 @@ async function fetchGlobalBadges() {
   try {
     const response = await fetch(`${TWITCH_API_BASE}/chat/badges/global`, {
       headers: {
-        "Authorization": `Bearer ${token}`,
+        "Authorization": `Bearer ${oauthToken}`,
         "Client-Id": clientId
       }
     });
@@ -456,8 +456,8 @@ async function addChat(providedChannel) {
     titleLink.target = "_blank"; // Open in a new tab
     titleLink.style.textDecoration = "none"; // Optional: remove underline
     titleLink.style.color = "inherit"; // Optional: inherit color from parent
-    titleLink.style.display = 'block'; // Make the anchor a block element
 
+    
     const title = document.createElement("h4");
     title.textContent = `#${channel}`;
     titleLink.appendChild(title); // Place the h4 inside the link
